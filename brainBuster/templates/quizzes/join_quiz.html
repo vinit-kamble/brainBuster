@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Join a Quiz</h2>
+  <form method="post">
+    {% csrf_token %}
+    <label for="code">Enter Quiz Code:</label>
+    <input type="text" id="code" name="code" class="form-control" placeholder="Quiz Code">
+    <button type="submit">Join Quiz</button>
+  </form>
+{% endblock %}

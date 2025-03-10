@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>My Quiz Dashboard</h2>
+  <p><a href="{% url 'create_quiz' %}">Create a New Quiz</a> | <a href="{% url 'join_quiz' %}">Join a Quiz</a></p>
+
+  <h3>Quizzes You Created:</h3>
+  {% if created_quizzes %}
+    <ul>
+      {% for quiz in created_quizzes %}
+        <li>{{ quiz.title }} (Code: {{ quiz.code }})</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>You haven't created any quizzes yet.</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h1 class="mb-4">Welcome to BrainBuster</h1>
+    <p class="lead">Challenge your mind with interactive quizzes. Login or sign up to get started, or join a quiz directly with a quiz code!</p>
+    
+    <div class="mt-4">
+        <a href="{% url 'login' %}" class="btn btn-primary btn-lg m-2">Login</a>
+        <a href="{% url 'signup' %}" class="btn btn-secondary btn-lg m-2">Signup</a>
+        <a href="{% url 'join_quiz' %}" class="btn btn-success btn-lg m-2">Join Quiz</a>
+    </div>
+</div>
+{% endblock %}
