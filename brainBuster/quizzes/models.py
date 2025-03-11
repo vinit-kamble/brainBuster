@@ -1,11 +1,20 @@
+import random
+import string
 from django.db import models
 from django.contrib.auth.models import User
 
 
+def generate_unique_code():
+    length = 6
+    while True:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+        if not Quiz.objects.filter(code=code).exists():
+            return code
+
 class Quiz(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    code = models.CharField(max_length=10, unique=True)
+    code = models.CharField(max_length=10, unique=True, default=generate_unique_code)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quizzes')
     duration = models.IntegerField(help_text="Duration in minutes", default=10)
     created_at = models.DateTimeField(auto_now_add=True)

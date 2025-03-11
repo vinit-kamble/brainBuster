@@ -1,17 +1,157 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <h2>My Quiz Dashboard</h2>
-  <p><a href="{% url 'create_quiz' %}">Create a New Quiz</a> | <a href="{% url 'join_quiz' %}">Join a Quiz</a></p>
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="fw-bold mb-3">Your Dashboard</h1>
+            <p class="text-muted">Welcome back, {{ user.username }}! Here you can manage your quizzes and view your progress.</p>
+        </div>
+    </div>
 
-  <h3>Quizzes You Created:</h3>
-  {% if created_quizzes %}
-    <ul>
-      {% for quiz in created_quizzes %}
-        <li>{{ quiz.title }} (Code: {{ quiz.code }})</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>You haven't created any quizzes yet.</p>
-  {% endif %}
+    <div class="row g-4">
+        <!-- Quick Actions Card -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'create_quiz' %}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i> Create New Quiz
+                        </a>
+                        <a href="{% url 'join_quiz' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i> Join a Quiz
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Card -->
+        <div class="col-md-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">Your Stats</h5>
+                    <div class="row g-3 text-center">
+                        <div class="col-4">
+                            <div class="p-3 bg-light rounded-3">
+                                <h2 class="text-primary fw-bold mb-0">{{ created_quizzes.count }}</h2>
+                                <p class="text-muted mb-0">Quizzes Created</p>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-light rounded-3">
+                                <h2 class="text-primary fw-bold mb-0">{{ user.participations.count }}</h2>
+                                <p class="text-muted mb-0">Quizzes Taken</p>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 bg-light rounded-3">
+                                <h2 class="text-primary fw-bold mb-0">0</h2>
+                                <p class="text-muted mb-0">Average Score</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Your Quizzes Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="fw-bold mb-4">Your Quizzes</h2>
+            
+            {% if created_quizzes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Title</th>
+                                <th>Code</th>
+                                <th>Created</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quiz in created_quizzes %}
+                            <tr>
+                                <td class="fw-medium">{{ quiz.title }}</td>
+                                <td><span class="badge bg-primary">{{ quiz.code }}</span></td>
+                                <td>{{ quiz.created_at|date:"M d, Y" }}</td>
+                                <td>{{ quiz.duration }} mins</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-puzzle-piece fa-3x text-muted mb-3"></i>
+                    <h4>You haven't created any quizzes yet</h4>
+                    <p class="text-muted">Create your first quiz to get started!</p>
+                    <a href="{% url 'create_quiz' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus-circle me-2"></i> Create Quiz
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="fw-bold mb-4">Recent Activity</h2>
+            
+            {% if user.participations.all %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Quiz</th>
+                                <th>Date</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for participation in user.participations.all|slice:":5" %}
+                            <tr>
+                                <td class="fw-medium">{{ participation.quiz.title }}</td>
+                                <td>{{ participation.submitted_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ participation.score }}%;" 
+                                            aria-valuenow="{{ participation.score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small class="text-muted">{{ participation.score }}%</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h4>No quiz activity yet</h4>
+                    <p class="text-muted">Join a quiz to see your recent activity here.</p>
+                    <a href="{% url 'join_quiz' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-sign-in-alt me-2"></i> Join Quiz
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
