@@ -14,10 +14,12 @@ def generate_unique_code():
 class Quiz(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    icon = models.CharField(max_length=50, default="question-circle")
     code = models.CharField(max_length=10, unique=True, default=generate_unique_code)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quizzes')
-    duration = models.IntegerField(help_text="Duration in minutes", default=10)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Changed from duration to time_limit_per_question to match the form
+    time_limit_per_question = models.IntegerField(help_text="Time limit in seconds", default=30)
 
     def __str__(self):
         return self.title
@@ -26,7 +28,7 @@ class Quiz(models.Model):
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, related_name="questions", on_delete=models.CASCADE)
     text = models.TextField()
-    time_limit = models.IntegerField(help_text="Time limit in seconds", default=30)
+    # Removed the time_limit as it will be defined at the quiz level
 
     def __str__(self):
         return f"Q: {self.text[:50]}..."  # Short preview of the question text
@@ -46,6 +48,9 @@ class Participation(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='participations')
     score = models.FloatField(default=0.0)
     submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'quiz')
 
     def __str__(self):
         return f"{self.user.username} - {self.quiz.title}"

@@ -10,3 +10,15 @@ class QuizForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Optional description'}),
             'duration': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Duration in minutes'}),
         }
+
+
+# from django import forms
+# from .models import Quiz
+
+# class QuizForm(forms.ModelForm):
+#     class Meta:
+#         model = Quiz
+#         fields = ['title', 'description', 'icon', 'time_limit_per_question']
+#         widgets = {
+#             'description': forms.Textarea(attrs={'rows': 3}),
+#         }

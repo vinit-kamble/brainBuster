@@ -1,22 +1,31 @@
 from django.contrib import admin
 from .models import Quiz, Question, Option, Participation
 
-@admin.register(Quiz)
-class QuizAdmin(admin.ModelAdmin):
-    list_display = ('title', 'code', 'created_by', 'created_at')
-    search_fields = ('title', 'code', 'description')
+class OptionInline(admin.TabularInline):
+    model = Option
+    extra = 4
 
-@admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ('text', 'quiz', 'time_limit')
-    search_fields = ('text',)
+    list_display = ['text', 'quiz']
+    inlines = [OptionInline]
+    search_fields = ['text', 'quiz__title']
 
-@admin.register(Option)
-class OptionAdmin(admin.ModelAdmin):
-    list_display = ('text', 'question', 'is_correct')
-    list_filter = ('is_correct',)
+class QuestionInline(admin.TabularInline):
+    model = Question
+    extra = 1
 
-@admin.register(Participation)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ['title', 'created_by', 'created_at', 'code']
+    search_fields = ['title', 'description', 'code']
+    list_filter = ['created_at']
+    inlines = [QuestionInline]
+
 class ParticipationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'quiz', 'score', 'submitted_at')
-    search_fields = ('user__username', 'quiz__title')
+    list_display = ['user', 'quiz', 'score', 'submitted_at']
+    list_filter = ['submitted_at']
+    search_fields = ['user__username', 'quiz__title']
+
+admin.site.register(Quiz, QuizAdmin)
+admin.site.register(Question, QuestionAdmin)
+admin.site.register(Option)
+admin.site.register(Participation, ParticipationAdmin)
