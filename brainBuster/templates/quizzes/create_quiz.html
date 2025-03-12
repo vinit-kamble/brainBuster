@@ -1,5 +1,6 @@
 <!-- create_quiz.html -->
 
+
 {% extends 'base.html' %}
 
 {% block content %}
@@ -9,65 +10,89 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
-                        <i class="fas fa-question-circle fa-3x text-primary mb-3"></i>
-                        <h2 class="fw-bold">Create New Quiz</h2>
-                        <p class="text-muted">Set up your quiz and add questions</p>
+                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} fa-3x text-primary mb-3"></i>
+                        <h2 class="fw-bold">
+                            {% if is_editing %}
+                            Edit Quiz: {{ quiz.title }}
+                            {% else %}
+                            Create New Quiz
+                            {% endif %}
+                        </h2>
+                        <p class="text-muted">
+                            {% if is_editing %}
+                            Modify your quiz questions and settings
+                            {% else %}
+                            Set up your quiz and add questions
+                            {% endif %}
+                        </p>
                     </div>
-                    
+
                     <!-- SECTION 1: Quiz Details -->
-                    <form id="quizForm" class="needs-validation" novalidate>
+                    <form id="quizForm" class="needs-validation" novalidate
+                        action="{% if is_editing %}{% url 'edit_quiz' quiz.id %}{% else %}{% url 'create_quiz' %}{% endif %}"
+                        method="post">
                         {% csrf_token %}
-                        
+
                         {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }}" role="alert">
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}" role="alert">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
                         {% endif %}
-                        
+
                         <div class="row align-items-end mb-4">
                             <!-- Quiz Title -->
                             <div class="col-md-8">
-                                <label for="quizTitle" class="form-label fw-medium">Quiz Title</label>
+                                <label for="quizTitle" class="form-label fw-medium">Quiz Title <span
+                                        class="text-danger">*</span></label>
                                 <input type="text" id="quizTitle" name="quiz_title" class="form-control" required>
+                                <div class="invalid-feedback">Quiz title is required</div>
                             </div>
-                            
+
                             <!-- Quiz Icon Button -->
                             <div class="col-md-4">
                                 <label class="form-label fw-medium">Quiz Icon</label>
                                 <div class="d-flex">
-                                    <button type="button" id="iconSelectButton" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#iconModal">
+                                    <button type="button" id="iconSelectButton" class="btn btn-outline-primary w-100"
+                                        data-bs-toggle="modal" data-bs-target="#iconModal">
                                         <i id="selectedIcon" class="fas fa-question-circle me-2"></i>
                                         <span>Select Icon</span>
                                     </button>
-                                    <input type="hidden" id="selectedIconValue" name="quiz_icon" value="question-circle">
+                                    <input type="hidden" id="selectedIconValue" name="quiz_icon"
+                                        value="question-circle">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Quiz Description -->
                         <div class="mb-3">
                             <label for="quizDescription" class="form-label fw-medium">Description (Optional)</label>
-                            <textarea id="quizDescription" name="quiz_description" class="form-control" rows="2"></textarea>
+                            <textarea id="quizDescription" name="quiz_description" class="form-control"
+                                rows="2"></textarea>
                             <div class="form-text">Provide a brief description of what your quiz is about.</div>
                         </div>
-                        
+
                         <!-- Time Limit -->
                         <div class="mb-4">
-                            <label for="timeLimit" class="form-label fw-medium">Time Limit Per Question (seconds)</label>
-                            <input type="number" id="timeLimit" name="time_limit_seconds" class="form-control" min="5" value="30">
+                            <label for="timeLimit" class="form-label fw-medium">Time Limit Per Question
+                                (seconds)</label>
+                            <input type="number" id="timeLimit" name="time_limit_seconds" class="form-control" min="5"
+                                value="30">
                             <div class="form-text">This time limit will apply to all questions in the quiz.</div>
                         </div>
+
+                        <!-- Hidden input for quiz data -->
+                        <input type="hidden" id="quizDataInput" name="quiz_data" value="">
                     </form>
                 </div>
             </div>
-            
+
             <!-- SECTION 2: Questions -->
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-light py-3">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Quiz Questions</h5>
+                        <h5 class="mb-0">Quiz Questions <span class="text-danger">*</span></h5>
                         <button type="button" id="addQuestionBtn" class="btn btn-sm btn-primary">
                             <i class="fas fa-plus me-1"></i> Add Question
                         </button>
@@ -81,18 +106,23 @@
                             <h5>No Questions Added Yet</h5>
                             <p class="text-muted">Click the "Add Question" button to start creating your quiz.</p>
                         </div>
-                        
+
                         <!-- Questions will be added here dynamically -->
                     </div>
                 </div>
             </div>
-            
+
             <!-- Save Quiz Button -->
             <div class="d-grid gap-2">
                 <button type="button" id="saveQuizBtn" class="btn btn-success py-2" disabled>
-                    <i class="fas fa-save me-2"></i>Save Quiz
+                    <i class="fas fa-save me-2"></i>{% if is_editing %}Update Quiz{% else %}Save Quiz{% endif %}
                 </button>
-                <a href="{% url 'quiz_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                {% if is_editing %}
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="fas fa-trash me-2"></i>Delete Quiz
+                </button>
+                {% endif %}
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </div>
     </div>
@@ -178,13 +208,16 @@
                 <form id="questionForm">
                     <!-- Question Text -->
                     <div class="mb-3">
-                        <label for="questionText" class="form-label fw-medium">Question</label>
+                        <label for="questionText" class="form-label fw-medium">Question <span
+                                class="text-danger">*</span></label>
                         <textarea id="questionText" class="form-control" rows="2" required></textarea>
+                        <div class="invalid-feedback">Question text is required</div>
                     </div>
-                    
+
                     <!-- Options -->
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Options</label>
+                        <label class="form-label fw-medium">Options <span class="text-danger">*</span></label>
+                        <div class="form-text mb-2">Select the radio button next to the correct answer.</div>
                         <div id="modalOptionsContainer">
                             <div class="option-group mb-2">
                                 <div class="input-group">
@@ -192,6 +225,7 @@
                                         <input type="radio" name="modal_correct_answer" value="0" required checked>
                                     </div>
                                     <input type="text" class="form-control option-text" placeholder="Option 1" required>
+                                    <div class="invalid-feedback">Option text is required</div>
                                 </div>
                             </div>
                             <div class="option-group mb-2">
@@ -200,6 +234,7 @@
                                         <input type="radio" name="modal_correct_answer" value="1">
                                     </div>
                                     <input type="text" class="form-control option-text" placeholder="Option 2" required>
+                                    <div class="invalid-feedback">Option text is required</div>
                                 </div>
                             </div>
                         </div>
@@ -219,15 +254,50 @@
     </div>
 </div>
 
+<!-- Delete Quiz Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Are you sure you want to delete this quiz? This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% if is_editing %}{% url 'delete_quiz' quiz.id %}{% endif %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete Quiz
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript for form interactions -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Global variables
-    let questions = [];
+    document.addEventListener('DOMContentLoaded', function () {
+        // Global variables
+        let questions = [];
+        let questionCounter = 0;
+        let isEditing = {% if is_editing %}true{% else %}false{% endif %};
+
+    // For editing mode, initialize with the proper icon
+    {% if is_editing %}
+    let selectedIcon = '{{ quiz.icon|default:"question-circle" }}';
+    {% else %}
     let selectedIcon = 'question-circle';
+    {% endif %}
+
     let selectedIconItem = null;
-    let questionCounter = 0;
-    
+
     // DOM Elements
     const iconItems = document.querySelectorAll('.icon-item');
     const selectIconBtn = document.getElementById('selectIconBtn');
@@ -240,10 +310,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionsContainer = document.getElementById('questionsContainer');
     const emptyState = document.getElementById('emptyState');
     const modalOptionsContainer = document.getElementById('modalOptionsContainer');
-    
+    const quizTitleInput = document.getElementById('quizTitle');
+    const quizDescriptionInput = document.getElementById('quizDescription');
+    const timeLimitInput = document.getElementById('timeLimit');
+
+    // If in edit mode, populate form fields with existing quiz data
+    {% if is_editing and quiz %}
+    quizTitleInput.value = "{{ quiz.title|escapejs }}";
+    quizDescriptionInput.value = "{{ quiz.description|escapejs }}";
+    timeLimitInput.value = "{{ quiz.time_limit_per_question }}";
+    selectedIcon = "{{ quiz.icon|default:'question-circle' }}";
+    selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
+    selectedIconValue.value = selectedIcon;
+
+    // Enable save button in edit mode
+    saveQuizBtn.disabled = false;
+    {% endif %}
+
+    // Load existing questions if in edit mode
+    // In create_quiz.html, modify how questions are loaded in edit mode:
+    {% if is_editing and questions_data %}
+    try {
+        const serverQuestions = JSON.parse('{{ questions_data|escapejs }}');
+        questions = []; // Clear existing questions first
+        questionCounter = 0; // Reset counter
+        
+        // Then add each question from server data
+        serverQuestions.forEach((q) => {
+            questionCounter++;
+            questions.push({
+                id: questionCounter,
+                text: q.text,
+                options: q.options,
+                correctAnswer: q.correctAnswer
+            });
+        });
+        
+        // Show questions in UI immediately after loading
+        renderQuestions();
+    } catch (e) {
+        console.error("Error parsing questions data:", e);
+    }
+    {% endif %}
+
+    // Preselect icon if editing
+    document.querySelectorAll('.icon-item').forEach(item => {
+        if (item.dataset.icon === selectedIcon) {
+            item.classList.add('selected');
+            selectedIconItem = item;
+        }
+    });
+
     // Icon selection in modal
     iconItems.forEach(item => {
-        item.addEventListener('click', function() {
+        item.addEventListener('click', function () {
             if (selectedIconItem) {
                 selectedIconItem.classList.remove('selected');
             }
@@ -252,26 +372,33 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedIcon = this.getAttribute('data-icon');
         });
     });
-    
+
     // Handle icon selection
-    selectIconBtn.addEventListener('click', function() {
+    selectIconBtn.addEventListener('click', function () {
         if (selectedIcon) {
             selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
             selectedIconValue.value = selectedIcon;
         }
     });
-    
+
     // Add question button
-    addQuestionBtn.addEventListener('click', function() {
+    addQuestionBtn.addEventListener('click', function () {
         // Reset modal form
         document.getElementById('questionForm').reset();
         resetModalOptions();
-        
+
+        // Reset title and button text for adding (not editing)
+        document.getElementById('questionModalLabel').textContent = 'Add New Question';
+        saveQuestionBtn.textContent = 'Add Question';
+
+        // Reset the click handler to the standard save function
+        saveQuestionBtn.onclick = saveQuestion;
+
         // Show modal
         const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
         questionModal.show();
     });
-    
+
     // Reset modal options to default two options
     function resetModalOptions() {
         modalOptionsContainer.innerHTML = `
@@ -293,17 +420,17 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
     }
-    
+
     // Add option in modal
-    modalAddOptionBtn.addEventListener('click', function() {
+    modalAddOptionBtn.addEventListener('click', function () {
         const optionGroups = modalOptionsContainer.querySelectorAll('.option-group');
         const lastOption = optionGroups[optionGroups.length - 1].querySelector('.option-text');
-        
+
         if (lastOption.value.trim() === '') {
             lastOption.classList.add('is-invalid');
             return;
         }
-        
+
         const newOptionIndex = optionGroups.length;
         const newOptionGroup = document.createElement('div');
         newOptionGroup.className = 'option-group mb-2';
@@ -319,18 +446,18 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         modalOptionsContainer.appendChild(newOptionGroup);
-        
+
         // Add event listener to remove button
         const removeBtn = newOptionGroup.querySelector('.remove-option');
-        removeBtn.addEventListener('click', function() {
+        removeBtn.addEventListener('click', function () {
             modalOptionsContainer.removeChild(newOptionGroup);
             updateModalRadioValues();
         });
-        
+
         // Focus the new input
         newOptionGroup.querySelector('.option-text').focus();
     });
-    
+
     // Update radio values in modal
     function updateModalRadioValues() {
         const radioButtons = document.querySelectorAll('input[name="modal_correct_answer"]');
@@ -338,20 +465,20 @@ document.addEventListener('DOMContentLoaded', function() {
             radio.value = index;
         });
     }
-    
-    // Save question from modal
-    saveQuestionBtn.addEventListener('click', function() {
+
+    // Save question function reference
+    function saveQuestion() {
         const questionText = document.getElementById('questionText').value.trim();
         if (questionText === '') {
             document.getElementById('questionText').classList.add('is-invalid');
             return;
         }
-        
+
         // Collect options
         const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
         const options = [];
         let allOptionsValid = true;
-        
+
         optionInputs.forEach((input, index) => {
             const value = input.value.trim();
             if (value === '') {
@@ -361,13 +488,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 options.push(value);
             }
         });
-        
+
         if (!allOptionsValid) return;
-        
+
         // Get correct answer
         const correctAnswerRadio = document.querySelector('input[name="modal_correct_answer"]:checked');
         const correctAnswer = parseInt(correctAnswerRadio.value);
-        
+
         // Create new question object
         questionCounter++;
         const question = {
@@ -376,31 +503,34 @@ document.addEventListener('DOMContentLoaded', function() {
             options: options,
             correctAnswer: correctAnswer
         };
-        
+
         // Add to questions array
         questions.push(question);
-        
+
         // Update UI
         renderQuestions();
-        
+
         // Close modal
         const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionModal'));
         questionModal.hide();
-        
+
         // Enable save button if we have at least one question
         saveQuizBtn.disabled = questions.length === 0;
-    });
-    
+    }
+
+    // Attach save question handler
+    saveQuestionBtn.addEventListener('click', saveQuestion);
+
     // Render all questions
     function renderQuestions() {
         if (questions.length === 0) {
             emptyState.style.display = 'block';
             return;
         }
-        
+
         emptyState.style.display = 'none';
         questionsContainer.innerHTML = '';
-        
+
         questions.forEach((question, index) => {
             const questionCard = document.createElement('div');
             questionCard.className = 'card mb-3';
@@ -434,37 +564,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            
+
             questionsContainer.appendChild(questionCard);
         });
-        
+
         // Add event listeners to edit and delete buttons
         document.querySelectorAll('.edit-question').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const questionId = parseInt(this.getAttribute('data-question-id'));
                 editQuestion(questionId);
             });
         });
-        
+
         document.querySelectorAll('.delete-question').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const questionId = parseInt(this.getAttribute('data-question-id'));
                 deleteQuestion(questionId);
             });
         });
     }
-    
+
     // Edit question
     function editQuestion(questionId) {
         const question = questions.find(q => q.id === questionId);
         if (!question) return;
-        
+
         // Reset modal options
         resetModalOptions();
-        
+
         // Fill in question text
         document.getElementById('questionText').value = question.text;
-        
+
+        // Update modal title
+        document.getElementById('questionModalLabel').textContent = 'Edit Question';
+
         // Add additional options if needed
         while (modalOptionsContainer.children.length < question.options.length) {
             const newIndex = modalOptionsContainer.children.length;
@@ -482,41 +615,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             modalOptionsContainer.appendChild(newOptionGroup);
-            
+
             // Add event listener to remove button
             const removeBtn = newOptionGroup.querySelector('.remove-option');
-            removeBtn.addEventListener('click', function() {
+            removeBtn.addEventListener('click', function () {
                 modalOptionsContainer.removeChild(newOptionGroup);
                 updateModalRadioValues();
             });
         }
-        
+
         // Fill in options and set correct answer
         const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
         const radioInputs = document.querySelectorAll('input[name="modal_correct_answer"]');
-        
+
         question.options.forEach((option, index) => {
             optionInputs[index].value = option;
         });
-        
+
         radioInputs[question.correctAnswer].checked = true;
-        
-        // Change save button text and action
-        const saveQuestionBtn = document.getElementById('saveQuestionBtn');
+
+        // Change save button text
         saveQuestionBtn.textContent = 'Update Question';
-        saveQuestionBtn.onclick = function() {
+
+        // Override the save button action for updating
+        saveQuestionBtn.onclick = function () {
             // Validate form
             const questionText = document.getElementById('questionText').value.trim();
             if (questionText === '') {
                 document.getElementById('questionText').classList.add('is-invalid');
                 return;
             }
-            
+
             // Collect options
             const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
             const options = [];
             let allOptionsValid = true;
-            
+
             optionInputs.forEach((input) => {
                 const value = input.value.trim();
                 if (value === '') {
@@ -526,67 +660,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     options.push(value);
                 }
             });
-            
+
             if (!allOptionsValid) return;
-            
+
             // Get correct answer
             const correctAnswerRadio = document.querySelector('input[name="modal_correct_answer"]:checked');
             const correctAnswer = parseInt(correctAnswerRadio.value);
-            
+
             // Update question object
             question.text = questionText;
             question.options = options;
             question.correctAnswer = correctAnswer;
-            
+
             // Update UI
             renderQuestions();
-            
+
             // Close modal
             const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionModal'));
             questionModal.hide();
-            
+
             // Reset save button
             saveQuestionBtn.textContent = 'Add Question';
             saveQuestionBtn.onclick = saveQuestion;
         };
-        
+
         // Show modal
         const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
         questionModal.show();
     }
-    
+
     // Delete question
     function deleteQuestion(questionId) {
         questions = questions.filter(q => q.id !== questionId);
         renderQuestions();
-        
+
         // Disable save button if no questions
         saveQuizBtn.disabled = questions.length === 0;
     }
-    
-    // Save question function reference
-    function saveQuestion() {
-        // This is just a reference to the original click handler
-        saveQuestionBtn.click();
-    }
-    
+
     // Save quiz
-    saveQuizBtn.addEventListener('click', function() {
+    saveQuizBtn.addEventListener('click', function () {
         const quizTitle = document.getElementById('quizTitle').value.trim();
         const quizDescription = document.getElementById('quizDescription').value.trim();
         const quizIcon = document.getElementById('selectedIconValue').value;
         const timeLimit = document.getElementById('timeLimit').value;
-        
+
         if (quizTitle === '') {
             document.getElementById('quizTitle').classList.add('is-invalid');
             return;
         }
-        
+
         if (questions.length === 0) {
             alert('Please add at least one question to your quiz');
             return;
         }
-        
+
         // Create quiz data object
         const quizData = {
             title: quizTitle,
@@ -595,27 +723,36 @@ document.addEventListener('DOMContentLoaded', function() {
             timeLimit: timeLimit,
             questions: questions
         };
-        
+
         // Convert to JSON string to be sent to server
         const quizJSON = JSON.stringify(quizData);
-        
+
         // Create a hidden input to carry all the quiz data
         const quizDataInput = document.createElement('input');
         quizDataInput.type = 'hidden';
         quizDataInput.name = 'quiz_data';
         quizDataInput.value = quizJSON;
-        
+
         // Append to form and submit
         const quizForm = document.getElementById('quizForm');
         quizForm.appendChild(quizDataInput);
         quizForm.method = 'post';
-        quizForm.action = "{% url 'create_quiz' %}";  // Update with your actual URL
+
+        // Set correct action URL based on edit mode
+        if (isEditing) {
+            quizForm.action = "{% url 'edit_quiz' quiz.id %}";
+            console.log("im inside isEditing !!");
+        } else {
+            quizForm.action = "{% url 'create_quiz' %}";
+        }
+        
+
         quizForm.submit();
     });
-    
+
     // Form validation helpers
     document.querySelectorAll('.form-control').forEach(input => {
-        input.addEventListener('input', function() {
+        input.addEventListener('input', function () {
             if (this.classList.contains('is-invalid')) {
                 this.classList.remove('is-invalid');
             }
@@ -625,52 +762,52 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* Icon selection styling */
-.icon-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 80px;
-    height: 80px;
-    padding: 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
+    /* Icon selection styling */
+    .icon-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
 
-.icon-item:hover {
-    background-color: rgba(0, 123, 255, 0.1);
-}
+    .icon-item:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
 
-.icon-item.selected {
-    background-color: rgba(0, 123, 255, 0.2);
-    border: 1px solid #0d6efd;
-}
+    .icon-item.selected {
+        background-color: rgba(0, 123, 255, 0.2);
+        border: 1px solid #0d6efd;
+    }
 
-.icon-item i {
-    margin-bottom: 5px;
-    color: #495057;
-}
+    .icon-item i {
+        margin-bottom: 5px;
+        color: #495057;
+    }
 
-.icon-item.selected i {
-    color: #0d6efd;
-}
+    .icon-item.selected i {
+        color: #0d6efd;
+    }
 
-.icon-item span {
-    font-size: 0.75rem;
-    text-align: center;
-}
+    .icon-item span {
+        font-size: 0.75rem;
+        text-align: center;
+    }
 
-/* Correct answer styling */
-.correct-answer .input-group-text {
-    background-color: rgba(25, 135, 84, 0.1);
-    border-color: rgba(25, 135, 84, 0.5);
-}
+    /* Correct answer styling */
+    .correct-answer .input-group-text {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-color: rgba(25, 135, 84, 0.5);
+    }
 
-.correct-answer .form-control {
-    border-color: rgba(25, 135, 84, 0.5);
-    background-color: rgba(25, 135, 84, 0.05);
-}
+    .correct-answer .form-control {
+        border-color: rgba(25, 135, 84, 0.5);
+        background-color: rgba(25, 135, 84, 0.05);
+    }
 </style>
 {% endblock %}

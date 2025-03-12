@@ -7,6 +7,6 @@ urlpatterns = [
     path('join/', views.join_quiz, name='join_quiz'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('view/<int:quiz_id>/', views.view_quiz, name='view_quiz'),
-    path('edit/<int:quiz_id>/', views.edit_quiz, name='edit_quiz'),
+    path('edit/<int:quiz_id>/', views.create_quiz, name='edit_quiz'),
     path('delete/<int:quiz_id>/', views.delete_quiz, name='delete_quiz'),
 ]

@@ -1,78 +1,32 @@
+# quizzes/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotAllowed
+from django.urls import reverse
 import json
 from .models import Quiz, Question, Option
 
 @login_required
 def dashboard(request):
-    # Fetch quizzes created by and participated in by the user.
     created_quizzes = Quiz.objects.filter(created_by=request.user)
     participated_quizzes = request.user.participations.all().select_related('quiz')
-    
     return render(request, 'quizzes/dashboard.html', {
         'created_quizzes': created_quizzes,
         'participated_quizzes': participated_quizzes,
     })
 
 @login_required
-def create_quiz(request):
-    if request.method == 'POST':
-        # Extract form data
-        title = request.POST.get('quiz_title')
-        description = request.POST.get('quiz_description', '')
-        icon = request.POST.get('quiz_icon', 'question-circle')
-        time_limit = request.POST.get('time_limit_seconds', 30)
-        quiz_data_json = request.POST.get('quiz_data')
-        
-        if not title:
-            messages.error(request, 'Quiz title is required.')
-            return render(request, 'quizzes/create_quiz.html')
-        
-        try:
-            quiz_data = json.loads(quiz_data_json)
-            
-            # Create the quiz
-            quiz = Quiz.objects.create(
-                title=title,
-                description=description,
-                icon=icon,
-                time_limit_per_question=time_limit,
-                created_by=request.user
-            )
-            
-            # Process questions
-            for q_data in quiz_data['questions']:
-                question = Question.objects.create(
-                    quiz=quiz,
-                    text=q_data['text']
-                )
-                
-                # Process options
-                for i, option_text in enumerate(q_data['options']):
-                    Option.objects.create(
-                        question=question,
-                        text=option_text,
-                        is_correct=(i == q_data['correctAnswer'])
-                    )
-            
-            messages.success(request, 'Quiz created successfully!')
-            return redirect('dashboard')
-        
-        except json.JSONDecodeError:
-            messages.error(request, 'Invalid quiz data format.')
-        except Exception as e:
-            messages.error(request, f'Error creating quiz: {str(e)}')
+def create_quiz(request, quiz_id=None):
+    quiz = None
+    is_editing = False
     
-    return render(request, 'quizzes/create_quiz.html')
+    if quiz_id:
+        quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
+        is_editing = True
 
-@login_required
-def edit_quiz(request, quiz_id):
-    quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
-    
     if request.method == 'POST':
-        # Extract form data
         title = request.POST.get('quiz_title')
         description = request.POST.get('quiz_description', '')
         icon = request.POST.get('quiz_icon', 'question-circle')
@@ -81,21 +35,38 @@ def edit_quiz(request, quiz_id):
         
         if not title:
             messages.error(request, 'Quiz title is required.')
-            return render(request, 'quizzes/edit_quiz.html', {'quiz': quiz})
-        
+            return render(request, 'quizzes/create_quiz.html', {'quiz': quiz, 'is_editing': is_editing})
+
         try:
             quiz_data = json.loads(quiz_data_json)
             
-            # Update the quiz details
-            quiz.title = title
-            quiz.description = description
-            quiz.icon = icon
-            quiz.time_limit_per_question = time_limit
-            quiz.save()
-            
-            # Delete existing questions and options
-            Question.objects.filter(quiz=quiz).delete()
-            
+            # In views.py, modify the question updating logic in create_quiz:
+            # In the POST handling section of create_quiz view
+            if is_editing:
+                # Update existing quiz
+                quiz.title = title
+                quiz.description = description
+                quiz.icon = icon
+                quiz.time_limit_per_question = time_limit
+                quiz.save()
+                
+                # Make sure to delete all existing questions AND their options
+                for question in Question.objects.filter(quiz=quiz):
+                    Option.objects.filter(question=question).delete()
+                Question.objects.filter(quiz=quiz).delete()
+                
+                messages.success(request, 'Quiz updated successfully!')
+            else:
+                # Create new quiz
+                quiz = Quiz.objects.create(
+                    title=title,
+                    description=description,
+                    icon=icon,
+                    time_limit_per_question=time_limit,
+                    created_by=request.user
+                )
+                messages.success(request, 'Quiz created successfully!')
+
             # Process questions
             for q_data in quiz_data['questions']:
                 question = Question.objects.create(
@@ -110,34 +81,39 @@ def edit_quiz(request, quiz_id):
                         text=option_text,
                         is_correct=(i == q_data['correctAnswer'])
                     )
-            
-            messages.success(request, 'Quiz updated successfully!')
+
             return redirect('dashboard')
-        
+
         except json.JSONDecodeError:
             messages.error(request, 'Invalid quiz data format.')
         except Exception as e:
-            messages.error(request, f'Error updating quiz: {str(e)}')
-    
-    # Prepare quiz data for the template
-    questions_data = []
-    for question in quiz.questions.all().prefetch_related('options'):
-        options = list(question.options.all())
-        correct_index = next((i for i, opt in enumerate(options) if opt.is_correct), 0)
+            messages.error(request, f'Error {"updating" if is_editing else "creating"} quiz: {str(e)}')
+
+    # Prepare context for GET request or form re-render
+    # In views.py, in the create_quiz function
+
+    # Modify the context preparation section:
+    # Prepare context for GET request or form re-render
+    context = {'is_editing': is_editing}
+
+    questions_data = []  # Initialize this variable outside the if block
+
+    if quiz:
+        for question in quiz.questions.all().prefetch_related('options'):
+            options = list(question.options.all())
+            correct_index = next((i for i, opt in enumerate(options) if opt.is_correct), 0)
+            questions_data.append({
+                'text': question.text,
+                'options': [opt.text for opt in options],
+                'correctAnswer': correct_index
+            })
         
-        questions_data.append({
-            'id': question.id,
-            'text': question.text,
-            'options': [opt.text for opt in options],
-            'correctAnswer': correct_index
+        context.update({
+            'quiz': quiz,
+            'questions_data': json.dumps(questions_data)
         })
-    
-    context = {
-        'quiz': quiz,
-        'questions_data': json.dumps(questions_data)
-    }
-    
-    return render(request, 'quizzes/edit_quiz.html', context)
+
+    return render(request, 'quizzes/create_quiz.html', context)
 
 @login_required
 def delete_quiz(request, quiz_id):
@@ -148,7 +124,7 @@ def delete_quiz(request, quiz_id):
         messages.success(request, 'Quiz deleted successfully!')
         return redirect('dashboard')
     
-    return render(request, 'quizzes/delete_quiz.html', {'quiz': quiz})
+    return HttpResponseNotAllowed(['POST'])
 
 @login_required
 def join_quiz(request):
@@ -162,11 +138,9 @@ def join_quiz(request):
         try:
             quiz = Quiz.objects.get(code=code)
             
-            # Check if user already participated
             if quiz.participations.filter(user=request.user).exists():
                 messages.info(request, f'You have already joined this quiz: {quiz.title}')
             else:
-                # Create participation entry
                 quiz.participations.create(user=request.user)
                 messages.success(request, f'Joined quiz: {quiz.title}')
             
@@ -180,8 +154,6 @@ def join_quiz(request):
 @login_required
 def view_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    
-    # Check if user is the creator or a participant
     is_creator = quiz.created_by == request.user
     is_participant = quiz.participations.filter(user=request.user).exists()
     
@@ -189,10 +161,8 @@ def view_quiz(request, quiz_id):
         messages.error(request, 'You do not have access to this quiz.')
         return redirect('dashboard')
     
-    context = {
+    return render(request, 'quizzes/view_quiz.html', {
         'quiz': quiz,
         'is_creator': is_creator,
         'questions': quiz.questions.all().prefetch_related('options')
-    }
-    
-    return render(request, 'quizzes/view_quiz.html', context)
+    })

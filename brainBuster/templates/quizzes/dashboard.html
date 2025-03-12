@@ -1,4 +1,4 @@
-<!-- dashboard.html  -->
+<!-- dashboard.html -->
 
 {% extends 'base.html' %}
 
@@ -88,9 +88,11 @@
                                         <a href="{% url 'edit_quiz' quiz.id %}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{% url 'delete_quiz' quiz.id %}" class="btn btn-sm btn-outline-danger">
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-quiz-btn" 
+                                                data-bs-toggle="modal" data-bs-target="#deleteQuizModal" 
+                                                data-quiz-id="{{ quiz.id }}" data-quiz-title="{{ quiz.title }}">
                                             <i class="fas fa-trash"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -156,4 +158,46 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Quiz Modal -->
+<div class="modal fade" id="deleteQuizModal" tabindex="-1" aria-labelledby="deleteQuizModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteQuizModalLabel">Delete Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the quiz "<span id="deleteQuizTitle"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteQuizForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Quiz</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set up delete quiz confirmation modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteModal = document.getElementById('deleteQuizModal');
+        const deleteForm = document.getElementById('deleteQuizForm');
+        const deleteTitle = document.getElementById('deleteQuizTitle');
+        
+        document.querySelectorAll('.delete-quiz-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const quizId = this.getAttribute('data-quiz-id');
+                const quizTitle = this.getAttribute('data-quiz-title');
+                
+                deleteForm.action = "{% url 'delete_quiz' 0 %}".replace('0', quizId);
+                deleteTitle.textContent = quizTitle;
+            });
+        });
+    });
+</script>
 {% endblock %}
