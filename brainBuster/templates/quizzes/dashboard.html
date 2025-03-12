@@ -1,3 +1,5 @@
+<!-- dashboard.html  -->
+
 {% extends 'base.html' %}
 
 {% block content %}
@@ -70,7 +72,7 @@
                                 <th>Title</th>
                                 <th>Code</th>
                                 <th>Created</th>
-                                <th>Duration</th>
+                                <th>Time Limit (per question)</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -80,13 +82,13 @@
                                 <td class="fw-medium">{{ quiz.title }}</td>
                                 <td><span class="badge bg-primary">{{ quiz.code }}</span></td>
                                 <td>{{ quiz.created_at|date:"M d, Y" }}</td>
-                                <td>{{ quiz.duration }} mins</td>
+                                <td>{{ quiz.time_limit_per_question }} sec</td>
                                 <td>
                                     <div class="btn-group">
-                                        <a href="#" class="btn btn-sm btn-outline-primary">
+                                        <a href="{% url 'edit_quiz' quiz.id %}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="#" class="btn btn-sm btn-outline-danger">
+                                        <a href="{% url 'delete_quiz' quiz.id %}" class="btn btn-sm btn-outline-danger">
                                             <i class="fas fa-trash"></i>
                                         </a>
                                     </div>
