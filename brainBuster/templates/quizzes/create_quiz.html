@@ -726,28 +726,12 @@
 
         // Convert to JSON string to be sent to server
         const quizJSON = JSON.stringify(quizData);
-
-        // Create a hidden input to carry all the quiz data
-        const quizDataInput = document.createElement('input');
-        quizDataInput.type = 'hidden';
-        quizDataInput.name = 'quiz_data';
-        quizDataInput.value = quizJSON;
-
-        // Append to form and submit
-        const quizForm = document.getElementById('quizForm');
-        quizForm.appendChild(quizDataInput);
-        quizForm.method = 'post';
-
-        // Set correct action URL based on edit mode
-        if (isEditing) {
-            quizForm.action = "{% url 'edit_quiz' quiz.id %}";
-            console.log("im inside isEditing !!");
-        } else {
-            quizForm.action = "{% url 'create_quiz' %}";
-        }
         
-
-        quizForm.submit();
+        // Set the hidden input value
+        document.getElementById('quizDataInput').value = quizJSON;
+        
+        // Submit the form
+        document.getElementById('quizForm').submit();
     });
 
     // Form validation helpers
