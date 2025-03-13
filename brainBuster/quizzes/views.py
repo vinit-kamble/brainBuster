@@ -12,10 +12,18 @@ from .models import Quiz, Question, Option
 def dashboard(request):
     created_quizzes = Quiz.objects.filter(created_by=request.user)
     participated_quizzes = request.user.participations.all().select_related('quiz')
+    
+    # Calculate average score
+    total_score = sum(p.score for p in participated_quizzes if p.score is not None)
+    total_quizzes = participated_quizzes.count()
+    average_score = total_score / total_quizzes if total_quizzes > 0 else 0
+    
     return render(request, 'quizzes/dashboard.html', {
         'created_quizzes': created_quizzes,
         'participated_quizzes': participated_quizzes,
+        'average_score': average_score,  # Pass it to the template
     })
+
 
 @login_required
 def create_quiz(request, quiz_id=None):
@@ -187,18 +195,3 @@ def play_quiz(request, quiz_id):
     })
 
 
-@login_required
-def view_quiz(request, quiz_id):
-    quiz = get_object_or_404(Quiz, id=quiz_id)
-    is_creator = quiz.created_by == request.user
-    is_participant = quiz.participations.filter(user=request.user).exists()
-    
-    if not (is_creator or is_participant):
-        messages.error(request, 'You do not have access to this quiz.')
-        return redirect('dashboard')
-    
-    return render(request, 'quizzes/view_quiz.html', {
-        'quiz': quiz,
-        'is_creator': is_creator,
-        'questions': quiz.questions.all().prefetch_related('options')
-    })
