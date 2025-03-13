@@ -1,3 +1,5 @@
+<!-- join_quiz.html -->
+
 {% extends 'base.html' %}
 
 {% block content %}
@@ -14,14 +16,6 @@
                     
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
-                        
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }}" role="alert">
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
                         
                         <!-- Quiz Code Input -->
                         <div class="mb-4">

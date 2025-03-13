@@ -16,7 +16,7 @@ def dashboard(request):
     # Calculate average score
     total_score = sum(p.score for p in participated_quizzes if p.score is not None)
     total_quizzes = participated_quizzes.count()
-    average_score = total_score / total_quizzes if total_quizzes > 0 else 0
+    average_score = round(total_score / total_quizzes) if total_quizzes > 0 else 0
     
     return render(request, 'quizzes/dashboard.html', {
         'created_quizzes': created_quizzes,

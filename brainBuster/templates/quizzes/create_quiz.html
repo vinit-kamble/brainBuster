@@ -33,14 +33,6 @@
                         method="post">
                         {% csrf_token %}
 
-                        {% if messages %}
-                        {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}" role="alert">
-                            {{ message }}
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-
                         <div class="row align-items-end mb-4">
                             <!-- Quiz Title -->
                             <div class="col-md-8">

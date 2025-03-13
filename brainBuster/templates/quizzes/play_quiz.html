@@ -1,44 +1,358 @@
+<!-- play_quiz.html -->
+
 {% extends 'base.html' %}
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="text-center">{{ quiz.title }}</h2>
-    <p class="text-center">{{ quiz.description }}</p>
-    
-    <form id="quizForm" method="post">
-        {% csrf_token %}
-        <input type="hidden" name="answers" id="answers">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Quiz Header -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} fa-3x text-primary mb-3"></i>
+                        <h2 class="fw-bold">{{ quiz.title }}</h2>
+                        {% if quiz.description %}
+                            <p class="text-muted">{{ quiz.description }}</p>
+                        {% endif %}
+                    </div>
 
-        {% for question in questions %}
-        <div class="card my-3 p-3">
-            <h5>{{ question.text }}</h5>
-            {% for option in question.options.all %}
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="{{ option.text }}">
-                <label class="form-check-label">{{ option.text }}</label>
+                    <!-- Quiz Progress and Timer -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="progress flex-grow-1 me-3" style="height: 10px;">
+                            <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="d-flex align-items-center bg-light px-3 py-2 rounded">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span id="timer" class="fw-bold">00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Current Question Count -->
+                    <div class="text-center">
+                        <span id="questionCounter" class="badge bg-primary px-3 py-2">Question <span id="currentQuestionNum">1</span> of {{ questions|length }}</span>
+                    </div>
+                </div>
             </div>
-            {% endfor %}
-        </div>
-        {% endfor %}
 
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary">Submit Quiz</button>
+            <!-- Quiz Form -->
+            <form id="quizForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="answers" id="answers">
+                <input type="hidden" name="time_taken" id="timeTaken">
+                
+                <!-- Questions Container -->
+                <div id="questionsContainer">
+                    {% for question in questions %}
+                    <div class="question-card card shadow-sm border-0 mb-4 {% if not forloop.first %}d-none{% endif %}" data-question-index="{{ forloop.counter0 }}">
+                        <div class="card-body p-4">
+                            <h5 class="mb-4">{{ question.text }}</h5>
+                            <div class="options-container">
+                                {% for option in question.options.all %}
+                                <div class="option-item mb-3">
+                                    <div class="form-check custom-option">
+                                        <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="option_{{ question.id }}_{{ forloop.counter0 }}" value="{{ option.text }}">
+                                        <label class="form-check-label d-block p-3 rounded" for="option_{{ question.id }}_{{ forloop.counter0 }}">
+                                            {{ option.text }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex justify-content-between mb-4">
+                        <button type="button" id="prevBtn" class="btn btn-outline-secondary px-4" disabled>
+                            <i class="fas fa-arrow-left me-2"></i> Previous
+                        </button>
+                        <button type="button" id="nextBtn" class="btn btn-primary px-4">
+                            Next <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        <button type="submit" id="submitBtn" class="btn btn-success px-4 d-none">
+                            <i class="fas fa-check me-2"></i> Submit Quiz
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
+</div>
+
+<!-- Time's Up Modal -->
+<div class="modal fade" id="timeUpModal" tabindex="-1" aria-labelledby="timeUpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="timeUpModalLabel">Time's Up!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-hourglass-end fa-3x text-warning mb-3"></i>
+                    <p>Your time for this question has run out. Your current answers will be submitted.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="continueBtn">Continue to Next Question</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Completion Modal -->
+<div class="modal fade" id="quizCompletionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submit Quiz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Are you sure you want to submit your quiz? You won't be able to change your answers afterward.
+                </div>
+                <p id="unansweredWarning" class="text-danger d-none">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You have <span id="unansweredCount">0</span> unanswered questions.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Answers</button>
+                <button type="button" class="btn btn-success" id="confirmSubmitBtn">
+                    <i class="fas fa-paper-plane me-2"></i> Submit Quiz
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-document.getElementById('quizForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    let answers = {};
-
-    document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
-        let questionId = input.name.replace('question_', '');
-        answers[questionId] = input.value;
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const quizForm = document.getElementById('quizForm');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const questionCards = document.querySelectorAll('.question-card');
+    const progressBar = document.getElementById('progressBar');
+    const timerElement = document.getElementById('timer');
+    const currentQuestionNum = document.getElementById('currentQuestionNum');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
+    const continueBtn = document.getElementById('continueBtn');
+    const unansweredWarning = document.getElementById('unansweredWarning');
+    const unansweredCount = document.getElementById('unansweredCount');
+    
+    // Variables
+    const totalQuestions = {{ questions|length }};
+    const timeLimit = {{ quiz.time_limit_per_question }}; // Time limit in seconds per question
+    let currentQuestion = 0;
+    let timerInterval;
+    let questionTimer = timeLimit;
+    let totalTimeTaken = 0;
+    let answeredQuestions = {};
+    
+    // Initialize quiz
+    updateNavigationButtons();
+    updateProgressBar();
+    startTimer();
+    
+    // Event Listeners
+    prevBtn.addEventListener('click', goToPreviousQuestion);
+    nextBtn.addEventListener('click', goToNextQuestion);
+    submitBtn.addEventListener('click', showCompletionModal);
+    confirmSubmitBtn.addEventListener('click', submitQuiz);
+    continueBtn.addEventListener('click', handleTimesUp);
+    
+    // Radio button change event for all questions
+    document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const questionId = this.name.replace('question_', '');
+            answeredQuestions[questionId] = this.value;
+            
+            // Highlight the selected option
+            const options = document.querySelectorAll(`input[name="${this.name}"]`);
+            options.forEach(option => {
+                option.closest('.custom-option').classList.remove('selected');
+            });
+            this.closest('.custom-option').classList.add('selected');
+        });
     });
-
-    document.getElementById('answers').value = JSON.stringify(answers);
-    this.submit();
+    
+    // Functions
+    function goToNextQuestion() {
+        if (currentQuestion < totalQuestions - 1) {
+            hideCurrentQuestion();
+            currentQuestion++;
+            showCurrentQuestion();
+            updateNavigationButtons();
+            updateProgressBar();
+            resetTimer();
+        }
+    }
+    
+    function goToPreviousQuestion() {
+        if (currentQuestion > 0) {
+            hideCurrentQuestion();
+            currentQuestion--;
+            showCurrentQuestion();
+            updateNavigationButtons();
+            updateProgressBar();
+            resetTimer();
+        }
+    }
+    
+    function hideCurrentQuestion() {
+        questionCards[currentQuestion].classList.add('d-none');
+    }
+    
+    function showCurrentQuestion() {
+        questionCards[currentQuestion].classList.remove('d-none');
+        currentQuestionNum.textContent = currentQuestion + 1;
+    }
+    
+    function updateNavigationButtons() {
+        prevBtn.disabled = currentQuestion === 0;
+        
+        if (currentQuestion === totalQuestions - 1) {
+            nextBtn.classList.add('d-none');
+            submitBtn.classList.remove('d-none');
+        } else {
+            nextBtn.classList.remove('d-none');
+            submitBtn.classList.add('d-none');
+        }
+    }
+    
+    function updateProgressBar() {
+        const progress = ((currentQuestion + 1) / totalQuestions) * 100;
+        progressBar.style.width = `${progress}%`;
+    }
+    
+    function startTimer() {
+        questionTimer = timeLimit;
+        updateTimerDisplay();
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(function() {
+            questionTimer--;
+            totalTimeTaken++;
+            updateTimerDisplay();
+            
+            if (questionTimer <= 0) {
+                clearInterval(timerInterval);
+                showTimesUpModal();
+            }
+        }, 1000);
+    }
+    
+    function resetTimer() {
+        clearInterval(timerInterval);
+        startTimer();
+    }
+    
+    function updateTimerDisplay() {
+        const minutes = Math.floor(questionTimer / 60);
+        const seconds = questionTimer % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Change color based on time remaining
+        if (questionTimer <= 10) {
+            timerElement.classList.add('text-danger');
+            timerElement.classList.remove('text-warning');
+        } else if (questionTimer <= 20) {
+            timerElement.classList.add('text-warning');
+            timerElement.classList.remove('text-danger');
+        } else {
+            timerElement.classList.remove('text-warning', 'text-danger');
+        }
+    }
+    
+    function showTimesUpModal() {
+        const timeUpModal = new bootstrap.Modal(document.getElementById('timeUpModal'));
+        timeUpModal.show();
+    }
+    
+    function handleTimesUp() {
+        const timeUpModal = bootstrap.Modal.getInstance(document.getElementById('timeUpModal'));
+        timeUpModal.hide();
+        
+        if (currentQuestion < totalQuestions - 1) {
+            goToNextQuestion();
+        } else {
+            showCompletionModal();
+        }
+    }
+    
+    function showCompletionModal() {
+        // Check for unanswered questions
+        const answered = Object.keys(answeredQuestions).length;
+        const unanswered = totalQuestions - answered;
+        
+        if (unanswered > 0) {
+            unansweredWarning.classList.remove('d-none');
+            unansweredCount.textContent = unanswered;
+        } else {
+            unansweredWarning.classList.add('d-none');
+        }
+        
+        const completionModal = new bootstrap.Modal(document.getElementById('quizCompletionModal'));
+        completionModal.show();
+    }
+    
+    function submitQuiz() {
+        clearInterval(timerInterval);
+        
+        // Prepare data for submission
+        document.getElementById('answers').value = JSON.stringify(answeredQuestions);
+        document.getElementById('timeTaken').value = totalTimeTaken;
+        
+        // Submit the form
+        quizForm.submit();
+    }
 });
 </script>
+
+<style>
+    /* Custom styling for quiz options */
+    .custom-option label {
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .custom-option label:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+        border-color: rgba(13, 110, 253, 0.25);
+    }
+    
+    .custom-option.selected label {
+        background-color: rgba(13, 110, 253, 0.1);
+        border-color: #0d6efd;
+    }
+    
+    /* Animation for question transitions */
+    .question-card {
+        transition: all 0.3s ease;
+    }
+    
+    /* Timer styling */
+    #timer {
+        font-family: monospace;
+        font-size: 1.2rem;
+    }
+    
+    /* Progress bar animation */
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
+    
+    /* Quiz form container */
+    .question-card {
+        min-height: 300px;
+    }
+</style>
 {% endblock %}

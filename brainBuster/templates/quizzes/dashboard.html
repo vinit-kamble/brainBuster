@@ -135,10 +135,11 @@
                                 <td>{{ participation.submitted_at|date:"M d, Y" }}</td>
                                 <td>
                                     <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ participation.score }}%;" 
-                                            aria-valuenow="{{ participation.score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;" 
+                                            aria-valuenow="{{ participation.score|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
                                     </div>
-                                    <small class="text-muted">{{ participation.score }}%</small>
+                                    <small class="text-muted">{{ participation.score|floatformat:0 }}%</small>
                                 </td>
                             </tr>
                             {% endfor %}
