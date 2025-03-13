@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="text-center">{{ quiz.title }}</h2>
+    <p class="text-center">{{ quiz.description }}</p>
+    
+    <form id="quizForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="answers" id="answers">
+
+        {% for question in questions %}
+        <div class="card my-3 p-3">
+            <h5>{{ question.text }}</h5>
+            {% for option in question.options.all %}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="{{ option.text }}">
+                <label class="form-check-label">{{ option.text }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary">Submit Quiz</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('quizForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    let answers = {};
+
+    document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+        let questionId = input.name.replace('question_', '');
+        answers[questionId] = input.value;
+    });
+
+    document.getElementById('answers').value = JSON.stringify(answers);
+    this.submit();
+});
+</script>
+{% endblock %}

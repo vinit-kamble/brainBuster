@@ -288,369 +288,199 @@
         let questions = [];
         let questionCounter = 0;
         let isEditing = {% if is_editing %}true{% else %}false{% endif %};
-
-    // For editing mode, initialize with the proper icon
-    {% if is_editing %}
-    let selectedIcon = '{{ quiz.icon|default:"question-circle" }}';
-    {% else %}
-    let selectedIcon = 'question-circle';
-    {% endif %}
-
-    let selectedIconItem = null;
-
-    // DOM Elements
-    const iconItems = document.querySelectorAll('.icon-item');
-    const selectIconBtn = document.getElementById('selectIconBtn');
-    const selectedIconElem = document.getElementById('selectedIcon');
-    const selectedIconValue = document.getElementById('selectedIconValue');
-    const addQuestionBtn = document.getElementById('addQuestionBtn');
-    const modalAddOptionBtn = document.getElementById('modalAddOptionBtn');
-    const saveQuestionBtn = document.getElementById('saveQuestionBtn');
-    const saveQuizBtn = document.getElementById('saveQuizBtn');
-    const questionsContainer = document.getElementById('questionsContainer');
-    const emptyState = document.getElementById('emptyState');
-    const modalOptionsContainer = document.getElementById('modalOptionsContainer');
-    const quizTitleInput = document.getElementById('quizTitle');
-    const quizDescriptionInput = document.getElementById('quizDescription');
-    const timeLimitInput = document.getElementById('timeLimit');
-
-    // If in edit mode, populate form fields with existing quiz data
-    {% if is_editing and quiz %}
-    quizTitleInput.value = "{{ quiz.title|escapejs }}";
-    quizDescriptionInput.value = "{{ quiz.description|escapejs }}";
-    timeLimitInput.value = "{{ quiz.time_limit_per_question }}";
-    selectedIcon = "{{ quiz.icon|default:'question-circle' }}";
-    selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
-    selectedIconValue.value = selectedIcon;
-
-    // Enable save button in edit mode
-    saveQuizBtn.disabled = false;
-    {% endif %}
-
-    // Load existing questions if in edit mode
-    // In create_quiz.html, modify how questions are loaded in edit mode:
-    {% if is_editing and questions_data %}
-    try {
-        const serverQuestions = JSON.parse('{{ questions_data|escapejs }}');
-        questions = []; // Clear existing questions first
-        questionCounter = 0; // Reset counter
-        
-        // Then add each question from server data
-        serverQuestions.forEach((q) => {
-            questionCounter++;
-            questions.push({
-                id: questionCounter,
-                text: q.text,
-                options: q.options,
-                correctAnswer: q.correctAnswer
+    
+        // For editing mode, initialize with the proper icon
+        {% if is_editing %}
+        let selectedIcon = '{{ quiz.icon|default:"question-circle" }}';
+        {% else %}
+        let selectedIcon = 'question-circle';
+        {% endif %}
+    
+        let selectedIconItem = null;
+    
+        // DOM Elements
+        const iconItems = document.querySelectorAll('.icon-item');
+        const selectIconBtn = document.getElementById('selectIconBtn');
+        const selectedIconElem = document.getElementById('selectedIcon');
+        const selectedIconValue = document.getElementById('selectedIconValue');
+        const addQuestionBtn = document.getElementById('addQuestionBtn');
+        const modalAddOptionBtn = document.getElementById('modalAddOptionBtn');
+        const saveQuestionBtn = document.getElementById('saveQuestionBtn');
+        const saveQuizBtn = document.getElementById('saveQuizBtn');
+        const questionsContainer = document.getElementById('questionsContainer');
+        const emptyState = document.getElementById('emptyState');
+        const modalOptionsContainer = document.getElementById('modalOptionsContainer');
+        const quizTitleInput = document.getElementById('quizTitle');
+        const quizDescriptionInput = document.getElementById('quizDescription');
+        const timeLimitInput = document.getElementById('timeLimit');
+    
+        // If in edit mode, populate form fields with existing quiz data
+        {% if is_editing and quiz %}
+        quizTitleInput.value = "{{ quiz.title|escapejs }}";
+        quizDescriptionInput.value = "{{ quiz.description|escapejs }}";
+        timeLimitInput.value = "{{ quiz.time_limit_per_question }}";
+        selectedIcon = "{{ quiz.icon|default:'question-circle' }}";
+        selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
+        selectedIconValue.value = selectedIcon;
+    
+        // Enable save button in edit mode
+        saveQuizBtn.disabled = false;
+        {% endif %}
+    
+        // Load existing questions if in edit mode
+        {% if is_editing and questions_data %}
+        try {
+            const serverQuestions = JSON.parse('{{ questions_data|escapejs }}');
+            questions = []; // Clear existing questions first
+            questionCounter = 0; // Reset counter
+            
+            // Then add each question from server data
+            serverQuestions.forEach((q) => {
+                questionCounter++;
+                questions.push({
+                    id: questionCounter,
+                    text: q.text,
+                    options: q.options,
+                    correctAnswer: q.correctAnswer
+                });
+            });
+            
+            // Show questions in UI immediately after loading
+            renderQuestions();
+        } catch (e) {
+            console.error("Error parsing questions data:", e);
+        }
+        {% endif %}
+    
+        // Preselect icon if editing
+        document.querySelectorAll('.icon-item').forEach(item => {
+            if (item.dataset.icon === selectedIcon) {
+                item.classList.add('selected');
+                selectedIconItem = item;
+            }
+        });
+    
+        // Icon selection in modal
+        iconItems.forEach(item => {
+            item.addEventListener('click', function () {
+                if (selectedIconItem) {
+                    selectedIconItem.classList.remove('selected');
+                }
+                this.classList.add('selected');
+                selectedIconItem = this;
+                selectedIcon = this.getAttribute('data-icon');
             });
         });
-        
-        // Show questions in UI immediately after loading
-        renderQuestions();
-    } catch (e) {
-        console.error("Error parsing questions data:", e);
-    }
-    {% endif %}
-
-    // Preselect icon if editing
-    document.querySelectorAll('.icon-item').forEach(item => {
-        if (item.dataset.icon === selectedIcon) {
-            item.classList.add('selected');
-            selectedIconItem = item;
-        }
-    });
-
-    // Icon selection in modal
-    iconItems.forEach(item => {
-        item.addEventListener('click', function () {
-            if (selectedIconItem) {
-                selectedIconItem.classList.remove('selected');
-            }
-            this.classList.add('selected');
-            selectedIconItem = this;
-            selectedIcon = this.getAttribute('data-icon');
-        });
-    });
-
-    // Handle icon selection
-    selectIconBtn.addEventListener('click', function () {
-        if (selectedIcon) {
-            selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
-            selectedIconValue.value = selectedIcon;
-        }
-    });
-
-    // Add question button
-    addQuestionBtn.addEventListener('click', function () {
-        // Reset modal form
-        document.getElementById('questionForm').reset();
-        resetModalOptions();
-
-        // Reset title and button text for adding (not editing)
-        document.getElementById('questionModalLabel').textContent = 'Add New Question';
-        saveQuestionBtn.textContent = 'Add Question';
-
-        // Reset the click handler to the standard save function
-        saveQuestionBtn.onclick = saveQuestion;
-
-        // Show modal
-        const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
-        questionModal.show();
-    });
-
-    // Reset modal options to default two options
-    function resetModalOptions() {
-        modalOptionsContainer.innerHTML = `
-            <div class="option-group mb-2">
-                <div class="input-group">
-                    <div class="input-group-text">
-                        <input type="radio" name="modal_correct_answer" value="0" required checked>
-                    </div>
-                    <input type="text" class="form-control option-text" placeholder="Option 1" required>
-                </div>
-            </div>
-            <div class="option-group mb-2">
-                <div class="input-group">
-                    <div class="input-group-text">
-                        <input type="radio" name="modal_correct_answer" value="1">
-                    </div>
-                    <input type="text" class="form-control option-text" placeholder="Option 2" required>
-                </div>
-            </div>
-        `;
-    }
-
-    // Add option in modal
-    modalAddOptionBtn.addEventListener('click', function () {
-        const optionGroups = modalOptionsContainer.querySelectorAll('.option-group');
-        const lastOption = optionGroups[optionGroups.length - 1].querySelector('.option-text');
-
-        if (lastOption.value.trim() === '') {
-            lastOption.classList.add('is-invalid');
-            return;
-        }
-
-        const newOptionIndex = optionGroups.length;
-        const newOptionGroup = document.createElement('div');
-        newOptionGroup.className = 'option-group mb-2';
-        newOptionGroup.innerHTML = `
-            <div class="input-group">
-                <div class="input-group-text">
-                    <input type="radio" name="modal_correct_answer" value="${newOptionIndex}">
-                </div>
-                <input type="text" class="form-control option-text" placeholder="Option ${newOptionIndex + 1}" required>
-                <button type="button" class="btn btn-outline-danger remove-option">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        modalOptionsContainer.appendChild(newOptionGroup);
-
-        // Add event listener to remove button
-        const removeBtn = newOptionGroup.querySelector('.remove-option');
-        removeBtn.addEventListener('click', function () {
-            modalOptionsContainer.removeChild(newOptionGroup);
-            updateModalRadioValues();
-        });
-
-        // Focus the new input
-        newOptionGroup.querySelector('.option-text').focus();
-    });
-
-    // Update radio values in modal
-    function updateModalRadioValues() {
-        const radioButtons = document.querySelectorAll('input[name="modal_correct_answer"]');
-        radioButtons.forEach((radio, index) => {
-            radio.value = index;
-        });
-    }
-
-    // Save question function reference
-    function saveQuestion() {
-        const questionText = document.getElementById('questionText').value.trim();
-        if (questionText === '') {
-            document.getElementById('questionText').classList.add('is-invalid');
-            return;
-        }
-
-        // Collect options
-        const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
-        const options = [];
-        let allOptionsValid = true;
-
-        optionInputs.forEach((input, index) => {
-            const value = input.value.trim();
-            if (value === '') {
-                input.classList.add('is-invalid');
-                allOptionsValid = false;
-            } else {
-                options.push(value);
+    
+        // Handle icon selection
+        selectIconBtn.addEventListener('click', function () {
+            if (selectedIcon) {
+                selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
+                selectedIconValue.value = selectedIcon;
             }
         });
-
-        if (!allOptionsValid) return;
-
-        // Get correct answer
-        const correctAnswerRadio = document.querySelector('input[name="modal_correct_answer"]:checked');
-        const correctAnswer = parseInt(correctAnswerRadio.value);
-
-        // Create new question object
-        questionCounter++;
-        const question = {
-            id: questionCounter,
-            text: questionText,
-            options: options,
-            correctAnswer: correctAnswer
-        };
-
-        // Add to questions array
-        questions.push(question);
-
-        // Update UI
-        renderQuestions();
-
-        // Close modal
-        const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionModal'));
-        questionModal.hide();
-
-        // Enable save button if we have at least one question
-        saveQuizBtn.disabled = questions.length === 0;
-    }
-
-    // Attach save question handler
-    saveQuestionBtn.addEventListener('click', saveQuestion);
-
-    // Render all questions
-    function renderQuestions() {
-        if (questions.length === 0) {
-            emptyState.style.display = 'block';
-            return;
-        }
-
-        emptyState.style.display = 'none';
-        questionsContainer.innerHTML = '';
-
-        questions.forEach((question, index) => {
-            const questionCard = document.createElement('div');
-            questionCard.className = 'card mb-3';
-            questionCard.innerHTML = `
-                <div class="card-header bg-light py-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Question ${index + 1}</h6>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-outline-primary edit-question me-1" data-question-id="${question.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger delete-question" data-question-id="${question.id}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+    
+        // Add question button
+        addQuestionBtn.addEventListener('click', function () {
+            // Reset modal form
+            document.getElementById('questionForm').reset();
+            resetModalOptions();
+    
+            // Reset title and button text for adding (not editing)
+            document.getElementById('questionModalLabel').textContent = 'Add New Question';
+            saveQuestionBtn.textContent = 'Add Question';
+    
+            // Set the click handler to the standard save function
+            saveQuestionBtn.onclick = saveQuestion;
+    
+            // Show modal
+            const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
+            questionModal.show();
+        });
+    
+        // Reset modal options to default two options
+        function resetModalOptions() {
+            modalOptionsContainer.innerHTML = `
+                <div class="option-group mb-2">
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input type="radio" name="modal_correct_answer" value="0" required checked>
                         </div>
+                        <input type="text" class="form-control option-text" placeholder="Option 1" required>
+                        <div class="invalid-feedback">Option text is required</div>
                     </div>
                 </div>
-                <div class="card-body py-3">
-                    <p class="mb-3">${question.text}</p>
-                    <div class="options-list">
-                        ${question.options.map((option, optIndex) => `
-                            <div class="option-item mb-2 ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
-                                <div class="input-group">
-                                    <div class="input-group-text">
-                                        <i class="fas ${optIndex === question.correctAnswer ? 'fa-check-circle text-success' : 'fa-circle text-muted'}"></i>
-                                    </div>
-                                    <input type="text" class="form-control" value="${option}" readonly>
-                                </div>
-                            </div>
-                        `).join('')}
+                <div class="option-group mb-2">
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input type="radio" name="modal_correct_answer" value="1">
+                        </div>
+                        <input type="text" class="form-control option-text" placeholder="Option 2" required>
+                        <div class="invalid-feedback">Option text is required</div>
                     </div>
                 </div>
             `;
-
-            questionsContainer.appendChild(questionCard);
-        });
-
-        // Add event listeners to edit and delete buttons
-        document.querySelectorAll('.edit-question').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const questionId = parseInt(this.getAttribute('data-question-id'));
-                editQuestion(questionId);
-            });
-        });
-
-        document.querySelectorAll('.delete-question').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const questionId = parseInt(this.getAttribute('data-question-id'));
-                deleteQuestion(questionId);
-            });
-        });
-    }
-
-    // Edit question
-    function editQuestion(questionId) {
-        const question = questions.find(q => q.id === questionId);
-        if (!question) return;
-
-        // Reset modal options
-        resetModalOptions();
-
-        // Fill in question text
-        document.getElementById('questionText').value = question.text;
-
-        // Update modal title
-        document.getElementById('questionModalLabel').textContent = 'Edit Question';
-
-        // Add additional options if needed
-        while (modalOptionsContainer.children.length < question.options.length) {
-            const newIndex = modalOptionsContainer.children.length;
+        }
+    
+        // Add option in modal
+        modalAddOptionBtn.addEventListener('click', function () {
+            const optionGroups = modalOptionsContainer.querySelectorAll('.option-group');
+            const lastOption = optionGroups[optionGroups.length - 1].querySelector('.option-text');
+    
+            if (lastOption.value.trim() === '') {
+                lastOption.classList.add('is-invalid');
+                return;
+            }
+    
+            const newOptionIndex = optionGroups.length;
             const newOptionGroup = document.createElement('div');
             newOptionGroup.className = 'option-group mb-2';
             newOptionGroup.innerHTML = `
                 <div class="input-group">
                     <div class="input-group-text">
-                        <input type="radio" name="modal_correct_answer" value="${newIndex}">
+                        <input type="radio" name="modal_correct_answer" value="${newOptionIndex}">
                     </div>
-                    <input type="text" class="form-control option-text" placeholder="Option ${newIndex + 1}" required>
+                    <input type="text" class="form-control option-text" placeholder="Option ${newOptionIndex + 1}" required>
                     <button type="button" class="btn btn-outline-danger remove-option">
                         <i class="fas fa-times"></i>
                     </button>
+                    <div class="invalid-feedback">Option text is required</div>
                 </div>
             `;
             modalOptionsContainer.appendChild(newOptionGroup);
-
+    
             // Add event listener to remove button
             const removeBtn = newOptionGroup.querySelector('.remove-option');
             removeBtn.addEventListener('click', function () {
                 modalOptionsContainer.removeChild(newOptionGroup);
                 updateModalRadioValues();
             });
-        }
-
-        // Fill in options and set correct answer
-        const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
-        const radioInputs = document.querySelectorAll('input[name="modal_correct_answer"]');
-
-        question.options.forEach((option, index) => {
-            optionInputs[index].value = option;
+    
+            // Focus the new input
+            newOptionGroup.querySelector('.option-text').focus();
         });
-
-        radioInputs[question.correctAnswer].checked = true;
-
-        // Change save button text
-        saveQuestionBtn.textContent = 'Update Question';
-
-        // Override the save button action for updating
-        saveQuestionBtn.onclick = function () {
-            // Validate form
+    
+        // Update radio values in modal
+        function updateModalRadioValues() {
+            const radioButtons = document.querySelectorAll('input[name="modal_correct_answer"]');
+            radioButtons.forEach((radio, index) => {
+                radio.value = index;
+            });
+        }
+    
+        // Save question function reference for adding a question
+        function saveQuestion() {
             const questionText = document.getElementById('questionText').value.trim();
             if (questionText === '') {
                 document.getElementById('questionText').classList.add('is-invalid');
                 return;
             }
-
+    
             // Collect options
             const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
             const options = [];
             let allOptionsValid = true;
-
+    
             optionInputs.forEach((input) => {
                 const value = input.value.trim();
                 if (value === '') {
@@ -660,90 +490,257 @@
                     options.push(value);
                 }
             });
-
+    
             if (!allOptionsValid) return;
-
+    
             // Get correct answer
             const correctAnswerRadio = document.querySelector('input[name="modal_correct_answer"]:checked');
             const correctAnswer = parseInt(correctAnswerRadio.value);
-
-            // Update question object
-            question.text = questionText;
-            question.options = options;
-            question.correctAnswer = correctAnswer;
-
+    
+            // Create new question object
+            questionCounter++;
+            const question = {
+                id: questionCounter,
+                text: questionText,
+                options: options,
+                correctAnswer: correctAnswer
+            };
+    
+            // Add to questions array
+            questions.push(question);
+    
             // Update UI
             renderQuestions();
-
+    
             // Close modal
             const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionModal'));
             questionModal.hide();
-
-            // Reset save button
-            saveQuestionBtn.textContent = 'Add Question';
-            saveQuestionBtn.onclick = saveQuestion;
-        };
-
-        // Show modal
-        const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
-        questionModal.show();
-    }
-
-    // Delete question
-    function deleteQuestion(questionId) {
-        questions = questions.filter(q => q.id !== questionId);
-        renderQuestions();
-
-        // Disable save button if no questions
-        saveQuizBtn.disabled = questions.length === 0;
-    }
-
-    // Save quiz
-    saveQuizBtn.addEventListener('click', function () {
-        const quizTitle = document.getElementById('quizTitle').value.trim();
-        const quizDescription = document.getElementById('quizDescription').value.trim();
-        const quizIcon = document.getElementById('selectedIconValue').value;
-        const timeLimit = document.getElementById('timeLimit').value;
-
-        if (quizTitle === '') {
-            document.getElementById('quizTitle').classList.add('is-invalid');
-            return;
+    
+            // Enable save button if we have at least one question
+            saveQuizBtn.disabled = questions.length === 0;
         }
-
-        if (questions.length === 0) {
-            alert('Please add at least one question to your quiz');
-            return;
-        }
-
-        // Create quiz data object
-        const quizData = {
-            title: quizTitle,
-            description: quizDescription,
-            icon: quizIcon,
-            timeLimit: timeLimit,
-            questions: questions
-        };
-
-        // Convert to JSON string to be sent to server
-        const quizJSON = JSON.stringify(quizData);
-        
-        // Set the hidden input value
-        document.getElementById('quizDataInput').value = quizJSON;
-        
-        // Submit the form
-        document.getElementById('quizForm').submit();
-    });
-
-    // Form validation helpers
-    document.querySelectorAll('.form-control').forEach(input => {
-        input.addEventListener('input', function () {
-            if (this.classList.contains('is-invalid')) {
-                this.classList.remove('is-invalid');
+    
+        // Render all questions
+        function renderQuestions() {
+            if (questions.length === 0) {
+                emptyState.style.display = 'block';
+                questionsContainer.innerHTML = '';
+                return;
             }
+    
+            emptyState.style.display = 'none';
+            questionsContainer.innerHTML = '';
+    
+            questions.forEach((question, index) => {
+                const questionCard = document.createElement('div');
+                questionCard.className = 'card mb-3';
+                questionCard.innerHTML = `
+                    <div class="card-header bg-light py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Question ${index + 1}</h6>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary edit-question me-1" data-question-id="${question.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-question" data-question-id="${question.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body py-3">
+                        <p class="mb-3">${question.text}</p>
+                        <div class="options-list">
+                            ${question.options.map((option, optIndex) => `
+                                <div class="option-item mb-2 ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
+                                    <div class="input-group">
+                                        <div class="input-group-text">
+                                            <i class="fas ${optIndex === question.correctAnswer ? 'fa-check-circle text-success' : 'fa-circle text-muted'}"></i>
+                                        </div>
+                                        <input type="text" class="form-control" value="${option}" readonly>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                questionsContainer.appendChild(questionCard);
+            });
+    
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.edit-question').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const questionId = parseInt(this.getAttribute('data-question-id'));
+                    editQuestion(questionId);
+                });
+            });
+    
+            document.querySelectorAll('.delete-question').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const questionId = parseInt(this.getAttribute('data-question-id'));
+                    deleteQuestion(questionId);
+                });
+            });
+        }
+    
+        // Edit question
+        function editQuestion(questionId) {
+            const question = questions.find(q => q.id === questionId);
+            if (!question) return;
+    
+            // Reset modal options
+            resetModalOptions();
+    
+            // Fill in question text
+            document.getElementById('questionText').value = question.text;
+    
+            // Update modal title
+            document.getElementById('questionModalLabel').textContent = 'Edit Question';
+    
+            // Add additional options if needed
+            while (modalOptionsContainer.children.length < question.options.length) {
+                const newIndex = modalOptionsContainer.children.length;
+                const newOptionGroup = document.createElement('div');
+                newOptionGroup.className = 'option-group mb-2';
+                newOptionGroup.innerHTML = `
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input type="radio" name="modal_correct_answer" value="${newIndex}">
+                        </div>
+                        <input type="text" class="form-control option-text" placeholder="Option ${newIndex + 1}" required>
+                        <button type="button" class="btn btn-outline-danger remove-option">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="invalid-feedback">Option text is required</div>
+                    </div>
+                `;
+                modalOptionsContainer.appendChild(newOptionGroup);
+    
+                // Add event listener to remove button
+                const removeBtn = newOptionGroup.querySelector('.remove-option');
+                removeBtn.addEventListener('click', function () {
+                    modalOptionsContainer.removeChild(newOptionGroup);
+                    updateModalRadioValues();
+                });
+            }
+    
+            // Fill in options and set correct answer
+            const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
+            const radioInputs = document.querySelectorAll('input[name="modal_correct_answer"]');
+    
+            question.options.forEach((option, index) => {
+                optionInputs[index].value = option;
+            });
+    
+            radioInputs[question.correctAnswer].checked = true;
+    
+            // Change save button text and override the click handler for updating
+            saveQuestionBtn.textContent = 'Update Question';
+            saveQuestionBtn.onclick = function () {
+                const questionText = document.getElementById('questionText').value.trim();
+                if (questionText === '') {
+                    document.getElementById('questionText').classList.add('is-invalid');
+                    return;
+                }
+    
+                // Collect options
+                const optionInputs = modalOptionsContainer.querySelectorAll('.option-text');
+                const options = [];
+                let allOptionsValid = true;
+    
+                optionInputs.forEach((input) => {
+                    const value = input.value.trim();
+                    if (value === '') {
+                        input.classList.add('is-invalid');
+                        allOptionsValid = false;
+                    } else {
+                        options.push(value);
+                    }
+                });
+    
+                if (!allOptionsValid) return;
+    
+                // Get correct answer
+                const correctAnswerRadio = document.querySelector('input[name="modal_correct_answer"]:checked');
+                const correctAnswer = parseInt(correctAnswerRadio.value);
+    
+                // Update question object
+                question.text = questionText;
+                question.options = options;
+                question.correctAnswer = correctAnswer;
+    
+                // Update UI
+                renderQuestions();
+    
+                // Close modal
+                const questionModal = bootstrap.Modal.getInstance(document.getElementById('questionModal'));
+                questionModal.hide();
+    
+                // Reset save button text and handler back to add function
+                saveQuestionBtn.textContent = 'Add Question';
+                saveQuestionBtn.onclick = saveQuestion;
+            };
+    
+            // Show modal
+            const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
+            questionModal.show();
+        }
+    
+        // Delete question
+        function deleteQuestion(questionId) {
+            questions = questions.filter(q => q.id !== questionId);
+            renderQuestions();
+            // Disable save quiz button if no questions remain
+            saveQuizBtn.disabled = questions.length === 0;
+        }
+    
+        // Save quiz
+        saveQuizBtn.addEventListener('click', function () {
+            const quizTitle = document.getElementById('quizTitle').value.trim();
+            const quizDescription = document.getElementById('quizDescription').value.trim();
+            const quizIcon = document.getElementById('selectedIconValue').value;
+            const timeLimit = document.getElementById('timeLimit').value;
+    
+            if (quizTitle === '') {
+                document.getElementById('quizTitle').classList.add('is-invalid');
+                return;
+            }
+    
+            if (questions.length === 0) {
+                alert('Please add at least one question to your quiz');
+                return;
+            }
+    
+            // Create quiz data object
+            const quizData = {
+                title: quizTitle,
+                description: quizDescription,
+                icon: quizIcon,
+                timeLimit: timeLimit,
+                questions: questions
+            };
+    
+            // Convert to JSON string to be sent to server
+            const quizJSON = JSON.stringify(quizData);
+            
+            // Set the hidden input value
+            document.getElementById('quizDataInput').value = quizJSON;
+            
+            // Submit the form
+            document.getElementById('quizForm').submit();
+        });
+    
+        // Form validation helpers
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('input', function () {
+                if (this.classList.contains('is-invalid')) {
+                    this.classList.remove('is-invalid');
+                }
+            });
         });
     });
-});
 </script>
+    
 
 <style>
     /* Icon selection styling */

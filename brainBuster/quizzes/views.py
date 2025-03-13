@@ -134,7 +134,7 @@ def join_quiz(request):
         if not code:
             messages.error(request, 'Please enter a quiz code.')
             return render(request, 'quizzes/join_quiz.html')
-        
+
         try:
             quiz = Quiz.objects.get(code=code)
             
@@ -143,13 +143,49 @@ def join_quiz(request):
             else:
                 quiz.participations.create(user=request.user)
                 messages.success(request, f'Joined quiz: {quiz.title}')
-            
-            return redirect('dashboard')
+
+            return redirect('play_quiz', quiz_id=quiz.id)
         
         except Quiz.DoesNotExist:
             messages.error(request, 'Quiz not found with that code.')
-    
+
     return render(request, 'quizzes/join_quiz.html')
+
+
+@login_required
+def play_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    is_participant = quiz.participations.filter(user=request.user).exists()
+
+    if not is_participant:
+        messages.error(request, 'You need to join the quiz before playing.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        user_answers = json.loads(request.POST.get('answers', '{}'))
+        score = 0
+
+        for question in quiz.questions.all():
+            correct_option = question.options.filter(is_correct=True).first()
+            if str(question.id) in user_answers and user_answers[str(question.id)] == correct_option.text:
+                score += 1
+
+        total_questions = quiz.questions.count()
+        final_score = (score / total_questions) * 100 if total_questions > 0 else 0
+
+        # Save participation score
+        participation = quiz.participations.get(user=request.user)
+        participation.score = final_score
+        participation.save()
+
+        messages.success(request, f'Quiz completed! Your score: {final_score:.2f}%')
+        return redirect('dashboard')
+
+    return render(request, 'quizzes/play_quiz.html', {
+        'quiz': quiz,
+        'questions': quiz.questions.prefetch_related('options')
+    })
+
 
 @login_required
 def view_quiz(request, quiz_id):
