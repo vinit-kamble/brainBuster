@@ -47,7 +47,7 @@ class Participation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='participations')
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='participations')
     score = models.FloatField(default=0.0)
-    submitted_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(auto_now=True)  # Changed from auto_now_add to auto_now
     time_taken = models.IntegerField(default=0, help_text="Total time taken in seconds")
     
     class Meta:
