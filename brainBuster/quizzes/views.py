@@ -7,6 +7,7 @@ from django.http import JsonResponse, HttpResponseNotAllowed
 from django.urls import reverse
 import json
 from .models import Quiz, Question, Option, Participation
+from datetime import datetime
 
 @login_required
 def dashboard(request):
@@ -134,7 +135,7 @@ def delete_quiz(request, quiz_id):
     
     return HttpResponseNotAllowed(['POST'])
 
-@login_required
+# Remove @login_required decorator
 def join_quiz(request):
     if request.method == 'POST':
         code = request.POST.get('code', '').strip().upper()
@@ -146,11 +147,13 @@ def join_quiz(request):
         try:
             quiz = Quiz.objects.get(code=code)
             
-            if quiz.participations.filter(user=request.user).exists():
-                messages.info(request, f'You have already joined this quiz: {quiz.title}')
-            else:
-                quiz.participations.create(user=request.user)
-                messages.success(request, f'Joined quiz: {quiz.title}')
+            # For logged in users, check participation
+            if request.user.is_authenticated:
+                if quiz.participations.filter(user=request.user).exists():
+                    messages.info(request, f'You have already joined this quiz: {quiz.title}')
+                else:
+                    quiz.participations.create(user=request.user)
+                    messages.success(request, f'Joined quiz: {quiz.title}')
 
             return redirect('play_quiz', quiz_id=quiz.id)
         
@@ -160,19 +163,25 @@ def join_quiz(request):
     return render(request, 'quizzes/join_quiz.html')
 
 
-@login_required
+# Remove @login_required decorator
 def play_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     
-    # Check if user is creator or has joined the quiz
-    is_creator = quiz.created_by == request.user
-    is_participant = quiz.participations.filter(user=request.user).exists()
-    
-    # If user hasn't joined and isn't the creator, add them as a participant
-    if not is_participant and not is_creator:
-        quiz.participations.create(user=request.user)
-        is_participant = True
-        messages.success(request, f'You have joined: {quiz.title}')
+    # For logged in users
+    if request.user.is_authenticated:
+        # Check if user is creator or has joined the quiz
+        is_creator = quiz.created_by == request.user
+        is_participant = quiz.participations.filter(user=request.user).exists()
+        
+        # If user hasn't joined and isn't the creator, add them as a participant
+        if not is_participant and not is_creator:
+            quiz.participations.create(user=request.user)
+            is_participant = True
+            messages.success(request, f'You have joined: {quiz.title}')
+    else:
+        # For anonymous users
+        is_creator = False
+        is_participant = False  # Anonymous users don't have participation records
     
     # Handle quiz submission
     if request.method == 'POST':
@@ -204,18 +213,26 @@ def play_quiz(request, quiz_id):
             # Calculate percentage score
             percentage_score = (score / total_questions) * 100 if total_questions > 0 else 0
             
-            # Update or create participation record
-            participation, created = Participation.objects.update_or_create(
-                user=request.user,
-                quiz=quiz,
-                defaults={
+            # For logged in users, update participation
+            if request.user.is_authenticated:
+                participation, created = Participation.objects.update_or_create(
+                    user=request.user,
+                    quiz=quiz,
+                    defaults={
+                        'score': percentage_score,
+                        'time_taken': time_taken
+                    }
+                )
+                return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
+            else:
+                # For anonymous users, store in session
+                request.session['anonymous_quiz_result'] = {
+                    'quiz_id': quiz.id,
                     'score': percentage_score,
-                    'time_taken': time_taken
+                    'time_taken': time_taken,
+                    'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
-            )
-            
-            messages.success(request, f'Quiz completed! Your score: {percentage_score:.1f}%')
-            return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
+                return redirect('quiz_results', quiz_id=quiz.id, participation_id=0)  # Use 0 for anonymous users
             
         except json.JSONDecodeError:
             messages.error(request, 'There was an error processing your answers.')
@@ -230,12 +247,39 @@ def play_quiz(request, quiz_id):
         'questions': questions,
         'is_creator': is_creator
     })
+    
 
-@login_required
 def quiz_results(request, quiz_id, participation_id):
     """View for showing quiz results after completion"""
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    participation = get_object_or_404(Participation, id=participation_id, user=request.user, quiz=quiz)
+    
+    # Check if anonymous (participation_id = 0)
+    if participation_id == 0:
+        # Get anonymous results from session
+        anonymous_result = request.session.get('anonymous_quiz_result', {})
+        
+        # Verify it's for the correct quiz
+        if str(anonymous_result.get('quiz_id')) != str(quiz_id):
+            messages.error(request, 'Quiz results not found.')
+            return redirect('home')
+        
+        # Create a temporary "participation" object
+        class AnonymousParticipation:
+            def __init__(self, data):
+                self.score = data.get('score', 0)
+                self.time_taken = data.get('time_taken', 0)
+                self.submitted_at = datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')), '%Y-%m-%d %H:%M:%S')
+                self.is_anonymous = True
+        
+        participation = AnonymousParticipation(anonymous_result)
+        
+    else:
+        # For authenticated users
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        participation = get_object_or_404(Participation, id=participation_id, user=request.user, quiz=quiz)
+        participation.is_anonymous = False
     
     # Get all questions with their options for the quiz
     questions = quiz.questions.prefetch_related('options').all()
@@ -246,5 +290,6 @@ def quiz_results(request, quiz_id, participation_id):
         'questions': questions,
         'score_percentage': participation.score,
         'correct_answers': int((participation.score / 100) * questions.count()),
-        'total_questions': questions.count()
+        'total_questions': questions.count(),
+        'is_anonymous': getattr(participation, 'is_anonymous', False)
     })
