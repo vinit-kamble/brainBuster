@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Results Header -->
+            <div class="card shadow border-0 mb-4 rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white p-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} fa-2x me-3"></i>
+                        <div>
+                            <h2 class="fw-bold mb-0">{{ quiz.title }}</h2>
+                            <p class="mb-0 mt-1 opacity-75">Quiz Results</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        {% if score_percentage >= 80 %}
+                            <div class="display-1 text-success mb-3"><i class="fas fa-trophy"></i></div>
+                            <h3 class="mb-1">Excellent!</h3>
+                        {% elif score_percentage >= 60 %}
+                            <div class="display-1 text-primary mb-3"><i class="fas fa-medal"></i></div>
+                            <h3 class="mb-1">Good Job!</h3>
+                        {% elif score_percentage >= 40 %}
+                            <div class="display-1 text-warning mb-3"><i class="fas fa-star-half-alt"></i></div>
+                            <h3 class="mb-1">Not Bad!</h3>
+                        {% else %}
+                            <div class="display-1 text-danger mb-3"><i class="fas fa-book-reader"></i></div>
+                            <h3 class="mb-1">Keep Learning!</h3>
+                        {% endif %}
+                        <p class="text-muted">You completed this quiz on {{ participation.submitted_at|date:"F j, Y" }}</p>
+                    </div>
+
+                    <!-- Score Display -->
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Score</h5>
+                                <div class="display-4 fw-bold {% if score_percentage >= 60 %}text-success{% elif score_percentage >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ score_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Correct</h5>
+                                <div class="display-4 fw-bold text-primary">
+                                    {{ correct_answers }}/{{ total_questions }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Percentile</h5>
+                                <div class="display-4 fw-bold text-info">
+                                    {% widthratio score_percentage 1 1 %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 mb-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-primary rounded-pill py-2">
+                    <i class="fas fa-home me-2"></i> Back to Dashboard
+                </a>
+                {% if quiz.created_by != request.user %}
+                <a href="{% url 'play_quiz' quiz.id %}" class="btn btn-outline-primary rounded-pill py-2">
+                    <i class="fas fa-redo me-2"></i> Retake Quiz
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

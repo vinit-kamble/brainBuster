@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.urls import reverse
 import json
-from .models import Quiz, Question, Option
+from .models import Quiz, Question, Option, Participation
 
 @login_required
 def dashboard(request):
@@ -163,35 +163,88 @@ def join_quiz(request):
 @login_required
 def play_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
+    
+    # Check if user is creator or has joined the quiz
+    is_creator = quiz.created_by == request.user
     is_participant = quiz.participations.filter(user=request.user).exists()
-
-    if not is_participant:
-        messages.error(request, 'You need to join the quiz before playing.')
-        return redirect('dashboard')
-
+    
+    # If user hasn't joined and isn't the creator, add them as a participant
+    if not is_participant and not is_creator:
+        quiz.participations.create(user=request.user)
+        is_participant = True
+        messages.success(request, f'You have joined: {quiz.title}')
+    
+    # Handle quiz submission
     if request.method == 'POST':
-        user_answers = json.loads(request.POST.get('answers', '{}'))
-        score = 0
-
-        for question in quiz.questions.all():
-            correct_option = question.options.filter(is_correct=True).first()
-            if str(question.id) in user_answers and user_answers[str(question.id)] == correct_option.text:
-                score += 1
-
-        total_questions = quiz.questions.count()
-        final_score = (score / total_questions) * 100 if total_questions > 0 else 0
-
-        # Save participation score
-        participation = quiz.participations.get(user=request.user)
-        participation.score = final_score
-        participation.save()
-
-        messages.success(request, f'Quiz completed! Your score: {final_score:.2f}%')
-        return redirect('dashboard')
-
+        try:
+            user_answers = json.loads(request.POST.get('answers', '{}'))
+            time_taken = int(request.POST.get('timeTaken', 0))
+            
+            # Calculate score
+            score = 0
+            total_questions = quiz.questions.count()
+            answered_questions = 0
+            
+            # Process each question and calculate score
+            for question in quiz.questions.all().prefetch_related('options'):
+                question_id = str(question.id)
+                
+                if question_id in user_answers:
+                    answered_questions += 1
+                    user_option_id = user_answers[question_id].get('optionId')
+                    
+                    # Check if the selected option is correct
+                    try:
+                        selected_option = Option.objects.get(id=user_option_id)
+                        if selected_option.is_correct:
+                            score += 1
+                    except Option.DoesNotExist:
+                        pass
+            
+            # Calculate percentage score
+            percentage_score = (score / total_questions) * 100 if total_questions > 0 else 0
+            
+            # Update or create participation record
+            participation, created = Participation.objects.update_or_create(
+                user=request.user,
+                quiz=quiz,
+                defaults={
+                    'score': percentage_score,
+                    'time_taken': time_taken
+                }
+            )
+            
+            messages.success(request, f'Quiz completed! Your score: {percentage_score:.1f}%')
+            return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
+            
+        except json.JSONDecodeError:
+            messages.error(request, 'There was an error processing your answers.')
+        except Exception as e:
+            messages.error(request, f'An error occurred: {str(e)}')
+    
+    # Get all questions with their options for the quiz
+    questions = list(quiz.questions.prefetch_related('options').all())
+    
     return render(request, 'quizzes/play_quiz.html', {
         'quiz': quiz,
-        'questions': quiz.questions.prefetch_related('options')
+        'questions': questions,
+        'is_creator': is_creator
     })
 
-
+@login_required
+def quiz_results(request, quiz_id, participation_id):
+    """View for showing quiz results after completion"""
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    participation = get_object_or_404(Participation, id=participation_id, user=request.user, quiz=quiz)
+    
+    # Get all questions with their options for the quiz
+    questions = quiz.questions.prefetch_related('options').all()
+    
+    return render(request, 'quizzes/quiz_results.html', {
+        'quiz': quiz,
+        'participation': participation,
+        'questions': questions,
+        'score_percentage': participation.score,
+        'correct_answers': int((participation.score / 100) * questions.count()),
+        'total_questions': questions.count()
+    })

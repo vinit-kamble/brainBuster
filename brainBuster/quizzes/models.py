@@ -48,9 +48,10 @@ class Participation(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='participations')
     score = models.FloatField(default=0.0)
     submitted_at = models.DateTimeField(auto_now_add=True)
-
+    time_taken = models.IntegerField(default=0, help_text="Total time taken in seconds")
+    
     class Meta:
         unique_together = ('user', 'quiz')
-
+    
     def __str__(self):
         return f"{self.user.username} - {self.quiz.title}"
