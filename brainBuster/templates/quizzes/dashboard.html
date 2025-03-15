@@ -116,7 +116,7 @@
     <!-- Recent Activity Section -->
     <div class="row mt-5">
         <div class="col-12">
-            <h2 class="fw-bold mb-4">Recent Activity</h2>
+            <h2 class="fw-bold mb-4">Your Activity</h2>
             
             {% if user.participations.all %}
                 <div class="table-responsive">
@@ -129,7 +129,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for participation in user.participations.all|slice:":5" %}
+                            {% for participation in user.participations.all %}
                             <tr>
                                 <td class="fw-medium">{{ participation.quiz.title }}</td>
                                 <td>{{ participation.submitted_at|date:"M d, Y" }}</td>
