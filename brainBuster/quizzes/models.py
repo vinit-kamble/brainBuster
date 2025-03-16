@@ -17,9 +17,9 @@ class Quiz(models.Model):
     icon = models.CharField(max_length=50, default="question-circle")
     code = models.CharField(max_length=10, unique=True, default=generate_unique_code)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quizzes')
-    created_at = models.DateTimeField(auto_now_add=True)
-    # Changed from duration to time_limit_per_question to match the form
+    created_at = models.DateTimeField(auto_now=True)
     time_limit_per_question = models.IntegerField(help_text="Time limit in seconds", default=30)
+    minimum_score_percentage = models.IntegerField(help_text="Minimum score required to pass (%)", default=60)
 
     def __str__(self):
         return self.title

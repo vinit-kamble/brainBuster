@@ -57,6 +57,13 @@
                             </div>
                         </div>
 
+                        <!-- Passing Score -->
+                        <div class="mb-4">
+                            <label for="passingScore" class="form-label fw-medium">Passing Score (%)</label>
+                            <input type="number" id="passingScore" name="minimum_score_percentage" class="form-control" min="1" max="100" value="60">
+                            <div class="form-text">Students must achieve this percentage or higher to pass the quiz.</div>
+                        </div>
+
                         <!-- Quiz Description -->
                         <div class="mb-3">
                             <label for="quizDescription" class="form-label fw-medium">Description (Optional)</label>
@@ -311,6 +318,7 @@
         quizTitleInput.value = "{{ quiz.title|escapejs }}";
         quizDescriptionInput.value = "{{ quiz.description|escapejs }}";
         timeLimitInput.value = "{{ quiz.time_limit_per_question }}";
+        document.getElementById('passingScore').value = "{{ quiz.minimum_score_percentage }}";
         selectedIcon = "{{ quiz.icon|default:'question-circle' }}";
         selectedIconElem.className = 'fas fa-' + selectedIcon + ' me-2';
         selectedIconValue.value = selectedIcon;
@@ -709,6 +717,7 @@
                 description: quizDescription,
                 icon: quizIcon,
                 timeLimit: timeLimit,
+                minimumScore: document.getElementById('passingScore').value,
                 questions: questions
             };
     

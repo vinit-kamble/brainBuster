@@ -17,20 +17,63 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
-                        {% if score_percentage >= 80 %}
-                            <div class="display-1 text-success mb-3"><i class="fas fa-trophy"></i></div>
-                            <h3 class="mb-1">Excellent!</h3>
-                        {% elif score_percentage >= 60 %}
-                            <div class="display-1 text-primary mb-3"><i class="fas fa-medal"></i></div>
-                            <h3 class="mb-1">Good Job!</h3>
-                        {% elif score_percentage >= 40 %}
-                            <div class="display-1 text-warning mb-3"><i class="fas fa-star-half-alt"></i></div>
-                            <h3 class="mb-1">Not Bad!</h3>
+                        {% if score_percentage >= quiz.minimum_score_percentage %}
+                            {% if score_percentage >= 90 %}
+                                <div class="display-1 text-success mb-3"><i class="fas fa-trophy"></i></div>
+                                <h3 class="mb-1">Excellent!</h3>
+                            {% elif score_percentage >= 75 %}
+                                <div class="display-1 text-success mb-3"><i class="fas fa-medal"></i></div>
+                                <h3 class="mb-1">Great Job!</h3>
+                            {% else %}
+                                <div class="display-1 text-success mb-3"><i class="fas fa-check-circle"></i></div>
+                                <h3 class="mb-1">You Passed!</h3>
+                            {% endif %}
                         {% else %}
-                            <div class="display-1 text-danger mb-3"><i class="fas fa-book-reader"></i></div>
-                            <h3 class="mb-1">Keep Learning!</h3>
+                            {% if score_percentage >= quiz.minimum_score_percentage|add:"-10" %}
+                                <div class="display-1 text-danger mb-3"><i class="fas fa-times-circle"></i></div>
+                                <h3 class="mb-1">So Close!</h3>
+                            {% else %}
+                                <div class="display-1 text-danger mb-3"><i class="fas fa-book-reader"></i></div>
+                                <h3 class="mb-1">Keep Learning!</h3>
+                            {% endif %}
                         {% endif %}
                         <p class="text-muted">You completed this quiz on {{ participation.submitted_at|date:"F j, Y" }}</p>
+                    </div>
+
+                    <!-- Score Display -->
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Score</h5>
+                                <div class="display-4 fw-bold {% if score_percentage >= 60 %}text-success{% elif score_percentage >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ score_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Correct</h5>
+                                <div class="display-4 fw-bold text-primary">
+                                    {{ correct_answers }}/{{ total_questions }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Required</h5>
+                                <div class="display-4 fw-bold text-secondary">
+                                    {{ quiz.minimum_score_percentage }}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5 class="mb-3">Result</h5>
+                                <div class="display-4 fw-bold {% if score_percentage >= quiz.minimum_score_percentage %}text-success{% else %}text-danger{% endif %}">
+                                    {% if score_percentage >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Score Display -->

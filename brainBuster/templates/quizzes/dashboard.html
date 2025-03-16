@@ -62,29 +62,61 @@
     <!-- Your Quizzes Section -->
     <div class="row mt-5">
         <div class="col-12">
-            <h2 class="fw-bold mb-4">Your Quizzes</h2>
-            
-            {% if created_quizzes %}
+            <h2 class="fw-bold mb-4">Your Quizzes</h2>           
+                {% if created_quizzes %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th>Title</th>
-                                <th>Code</th>
-                                <th>Created</th>
-                                <th>Time Limit (per question)</th>
-                                <th>Actions</th>
+                                <th class="border-bottom">Quiz</th>
+                                <th class="border-bottom">Code</th>
+                                <th class="border-bottom">Participants</th>
+                                <th class="border-bottom">Avg. Score</th>
+                                <th class="border-bottom">Pass Rate</th>
+                                <th class="border-bottom">Avg. Time</th>
+                                <th class="border-bottom">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for quiz in created_quizzes %}
                             <tr>
-                                <td class="fw-medium">{{ quiz.title }}</td>
-                                <td><span class="badge bg-primary">{{ quiz.code }}</span></td>
-                                <td>{{ quiz.created_at|date:"M d, Y" }}</td>
-                                <td>{{ quiz.time_limit_per_question }} sec</td>
+                                <td class="fw-medium border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} text-primary me-2"></i>
+                                        {{ quiz.title }}
+                                    </div>
+                                    <small class="text-muted">Created {{ quiz.created_at|date:"M d, Y" }}</small>
+                                </td>
+                                <td class="border-bottom"><span class="badge bg-primary">{{ quiz.code }}</span></td>
+                                <td>
+                                    <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#participantsModal{{ quiz.id }}">
+                                        {{ quiz.participations.count }}
+                                        <i class="fas fa-user-friends ms-1 text-muted"></i>
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if quiz.avg_time > 0 %}
+                                        {{ quiz.avg_time }} sec
+                                    {% else %}
+                                        <span class="text-muted">No data</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Replace the pass rate calculation: -->
+                                <td>{{ quiz.pass_rate }}%</td>
+                                <td>
+                                    {% with avg_time=quiz.participations.all|dictsort:"time_taken"|last %}
+                                        {% if avg_time > 0 %}
+                                            {{ avg_time|floatformat:0 }} sec
+                                        {% else %}
+                                            <span class="text-muted">No data</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
                                 <td>
                                     <div class="btn-group">
+                                        <a href="{% url 'quiz_stats' quiz.id %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </a>
                                         <a href="{% url 'edit_quiz' quiz.id %}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -135,11 +167,17 @@
                                 <td>{{ participation.submitted_at|date:"M d, Y" }}</td>
                                 <td>
                                     <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;" 
-                                            aria-valuenow="{{ participation.score|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar {% if participation.score >= participation.quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
+                                             role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;" 
+                                             aria-valuenow="{{ participation.score|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100">
                                         </div>
                                     </div>
-                                    <small class="text-muted">{{ participation.score|floatformat:0 }}%</small>
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small class="text-muted">{{ participation.score|floatformat:0 }}%</small>
+                                        <span class="badge {% if participation.score >= participation.quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if participation.score >= participation.quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
+                                        </span>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -181,6 +219,76 @@
             </div>
         </div>
     </div>
+    <!-- Participants Modal for each quiz -->
+    {% for quiz in created_quizzes %}
+    <div class="modal fade" id="participantsModal{{ quiz.id }}" tabindex="-1" aria-labelledby="participantsModalLabel{{ quiz.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="participantsModalLabel{{ quiz.id }}">
+                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} me-2"></i>
+                        {{ quiz.title }} - Participants
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if quiz.participations.all %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Participant</th>
+                                        <th>Score</th>
+                                        <th>Result</th>
+                                        <th>Time Taken</th>
+                                        <th>Attempts</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for participation in quiz.participations.all %}
+                                    <tr>
+                                        <td>{{ participation.user.username }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
+                                                    role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ participation.score|floatformat:1 }}%</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
+                                                {% if participation.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ participation.time_taken|floatformat:0 }} sec</td>
+                                        <!-- Replace the attempt count: -->
+                                        <td>{{ participation.attempt_count }}</td> 
+                                        <td>{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h4>No participants yet</h4>
+                            <p class="text-muted">Share your quiz code to get started!</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary copy-code-btn" data-code="{{ quiz.code }}">
+                        <i class="fas fa-copy me-1"></i> Copy Quiz Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <script>

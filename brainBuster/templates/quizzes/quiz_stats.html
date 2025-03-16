@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="fw-bold mb-3">
+                <i class="fas fa-{{ quiz.icon|default:'question-circle' }} text-primary me-2"></i>
+                {{ quiz.title }}
+            </h1>
+            <p class="text-muted">Detailed quiz statistics</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Quiz Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Quiz Details</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-fingerprint me-2 text-primary"></i>
+                                    <strong>Code:</strong> {{ quiz.code }}
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                                    <strong>Created:</strong> {{ quiz.created_at|date:"F j, Y" }}
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-question-circle me-2 text-primary"></i>
+                                    <strong>Questions:</strong> {{ quiz.questions.count }}
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-clock me-2 text-primary"></i>
+                                    <strong>Time Limit:</strong> {{ quiz.time_limit_per_question }} sec per question
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle me-2 text-primary"></i>
+                                    <strong>Passing Score:</strong> {{ quiz.minimum_score_percentage }}%
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Performance Summary</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-users me-2 text-primary"></i>
+                                    <strong>Total Participants:</strong> {{ quiz.participations.count }}
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-chart-line me-2 text-primary"></i>
+                                    <strong>Average Score:</strong> {{ average_score|floatformat:1 }}%
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-thumbs-up me-2 text-primary"></i>
+                                    <strong>Pass Rate:</strong> {{ pass_rate|floatformat:1 }}%
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-stopwatch me-2 text-primary"></i>
+                                    <strong>Average Time:</strong> {{ average_time|floatformat:0 }} sec
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-redo-alt me-2 text-primary"></i>
+                                    <strong>Average Attempts:</strong> {{ average_attempts|floatformat:1 }}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Question Analysis</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Question</th>
+                                    <th>Correct Rate</th>
+                                    <th>Avg. Time</th>
+                                    <th>Difficulty</th>
+                                </tr>
+                            </thead>
+                            <!-- For the Question Analysis section -->
+                            <tbody>
+                                {% for question in questions %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ question.text|truncatechars:50 }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ question.correct_rate }}%;">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ question.correct_rate }}%</small>
+                                    </td>
+                                    <td>{{ question.avg_time }} sec</td>
+                                    <td>
+                                        <span class="badge {{ question.difficulty_class }}">{{ question.difficulty }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Participant List -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Participants</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="exportBtn">
+                        <i class="fas fa-download me-1"></i> Export Data
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    {% if quiz.participations.count > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="participantsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Participant</th>
+                                        <th>Score</th>
+                                        <th>Status</th>
+                                        <th>Time Taken</th>
+                                        <th>Attempts</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for participation in quiz.participations.all %}
+                                    <tr>
+                                        <td>{{ participation.user.username }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
+                                                    role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;">
+                                                </div>
+                                            </div>
+                                            <small>{{ participation.score|floatformat:1 }}%</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
+                                                {% if participation.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ participation.time_taken|default:"0"|floatformat:0 }} sec</td>
+                                        <td>{{ participation.attempts|default:"1" }}</td>
+                                        <td>{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h4>No participants yet</h4>
+                            <p class="text-muted">Share your quiz code with others to get started!</p>
+                            <button class="btn btn-primary copy-code-btn mt-3" data-code="{{ quiz.code }}">
+                                <i class="fas fa-copy me-2"></i> Copy Quiz Code
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Charts and Visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Copy quiz code
+        document.querySelectorAll('.copy-code-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const code = this.getAttribute('data-code');
+                navigator.clipboard.writeText(code).then(() => {
+                    // Change button text temporarily
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="fas fa-check me-2"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                    }, 2000);
+                });
+            });
+        });
+
+        // Export participants data
+        document.getElementById('exportBtn')?.addEventListener('click', function() {
+            const table = document.getElementById('participantsTable');
+            if (!table) return;
+            
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll('td, th');
+                
+                for (let j = 0; j < cols.length; j++) {
+                    // Get cell text content, clean it up
+                    let text = cols[j].textContent.trim().replace(/(\r\n|\n|\r)/gm, '').replace(/"/g, '""');
+                    row.push('"' + text + '"');
+                }
+                
+                csv.push(row.join(','));
+            }
+            
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${document.title.replace(/\s+/g, '_')}_participants.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    });
+</script>
+{% endblock %}
