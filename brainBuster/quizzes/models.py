@@ -3,7 +3,6 @@ import string
 from django.db import models
 from django.contrib.auth.models import User
 
-
 def generate_unique_code():
     length = 6
     while True:
@@ -24,15 +23,12 @@ class Quiz(models.Model):
     def __str__(self):
         return self.title
 
-
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, related_name="questions", on_delete=models.CASCADE)
     text = models.TextField()
-    # Removed the time_limit as it will be defined at the quiz level
 
     def __str__(self):
-        return f"Q: {self.text[:50]}..."  # Short preview of the question text
-
+        return f"Q: {self.text[:50]}..."
 
 class Option(models.Model):
     question = models.ForeignKey(Question, related_name="options", on_delete=models.CASCADE)
@@ -42,16 +38,24 @@ class Option(models.Model):
     def __str__(self):
         return self.text
 
-
 class Participation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='participations')
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='participations')
     score = models.FloatField(default=0.0)
-    submitted_at = models.DateTimeField(auto_now=True)  # Changed from auto_now_add to auto_now
-    time_taken = models.IntegerField(default=0, help_text="Total time taken in seconds")
+    submitted_at = models.DateTimeField(auto_now=True)
+    total_time_taken = models.IntegerField(default=0, help_text="Total time taken for the quiz in seconds")
     
     class Meta:
         unique_together = ('user', 'quiz')
     
     def __str__(self):
         return f"{self.user.username} - {self.quiz.title}"
+
+class Answer(models.Model):
+    participation = models.ForeignKey(Participation, related_name='answers', on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_option = models.ForeignKey(Option, on_delete=models.CASCADE, null=True, blank=True)
+    time_taken = models.IntegerField(default=0, help_text="Time taken for this question in seconds")
+
+    def __str__(self):
+        return f"{self.participation} - {self.question.text[:20]}"

@@ -1,175 +1,52 @@
-<!-- play_quiz.html -->
-
 {% extends 'base.html' %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- Quiz Header -->
-            <div class="card shadow border-0 mb-4 rounded-4 overflow-hidden">
-                <div class="card-header bg-primary text-white p-3">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-{{ quiz.icon|default:'question-circle' }} fa-2x me-3"></i>
-                        <div>
-                            <h2 class="fw-bold mb-0">{{ quiz.title }}</h2>
-                            {% if quiz.description %}
-                                <p class="mb-0 mt-1 opacity-75">{{ quiz.description }}</p>
-                            {% endif %}
+        <div class="col-md-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-{{ quiz.icon|default:'question-circle' }} text-primary me-2"></i>
+                            {{ quiz.title }}
+                        </h5>
+                        <div id="timer" class="badge bg-primary py-2 px-3">
+                            <i class="fas fa-clock me-1"></i> <span id="timeRemaining">0:00</span>
                         </div>
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Quiz Progress -->
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center">
-                            <span id="questionCounter" class="badge bg-primary rounded-pill px-3 py-2 me-3">
-                                <span id="currentQuestionNum">1</span> / {{ questions|length }}
-                            </span>
-                            <div class="progress flex-grow-1 me-3" style="height: 8px; width: 250px;">
-                                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <div class="timer-container d-flex align-items-center bg-light px-3 py-2 rounded-pill shadow-sm">
-                                <i class="fas fa-clock text-primary me-2"></i>
-                                <span id="timer" class="fw-bold">00:30</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quiz Form -->
-            <form id="quizForm" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="answers" id="answers">
-                <input type="hidden" name="time_taken" id="timeTaken">
-                <input type="hidden" name="quiz_id" value="{{ quiz.id }}">
-                
-                <!-- Questions Container -->
-                <div id="questionsContainer">
-                    {% for question in questions %}
-                    <div class="question-card card shadow border-0 mb-4 {% if not forloop.first %}d-none{% endif %}" data-question-index="{{ forloop.counter0 }}" data-question-id="{{ question.id }}">
-                        <div class="card-body p-4">
-                            <div class="question-number text-muted mb-2">Question {{ forloop.counter }}</div>
-                            <h4 class="mb-4">{{ question.text }}</h4>
-                            <div class="options-container">
+                    <form id="quizForm" method="post" action="{% url 'play_quiz' quiz.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="totalTimeTaken" id="totalTimeTaken" value="0">
+                        
+                        <div id="questionsContainer">
+                            {% for question in questions %}
+                            <div class="question mb-5" data-question-id="{{ question.id }}" style="display: none;">
+                                <h5 class="fw-bold mb-3">{{ forloop.counter }}. {{ question.text }}</h5>
+                                <input type="hidden" name="timeTaken_{{ question.id }}" id="timeTaken_{{ question.id }}" value="0">
                                 {% for option in question.options.all %}
-                                <div class="option-item mb-3">
-                                    <div class="form-check custom-option">
-                                        <input class="form-check-input visually-hidden" type="radio" 
-                                               name="question_{{ question.id }}" 
-                                               id="option_{{ question.id }}_{{ forloop.counter0 }}" 
-                                               value="{{ option.text }}"
-                                               data-option-id="{{ option.id }}">
-                                        <label class="form-check-label d-block p-3 rounded" for="option_{{ question.id }}_{{ forloop.counter0 }}">
-                                            <div class="d-flex align-items-center">
-                                                <div class="option-indicator me-3">
-                                                    <div class="option-letter">{{ forloop.counter|stringformat:"A" }}</div>
-                                                </div>
-                                                <div>{{ option.text }}</div>
-                                            </div>
-                                        </label>
-                                    </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" 
+                                           id="option_{{ option.id }}" value="{{ option.id }}"
+                                           data-question-id="{{ question.id }}">
+                                    <label class="form-check-label" for="option_{{ option.id }}">
+                                        {{ option.text }}
+                                    </label>
                                 </div>
                                 {% endfor %}
                             </div>
+                            {% endfor %}
                         </div>
-                    </div>
-                    {% endfor %}
 
-                    <!-- Navigation Buttons -->
-                    <div class="d-flex justify-content-between mb-4">
-                        <button type="button" id="prevBtn" class="btn btn-outline-secondary px-4 py-2 rounded-pill" disabled>
-                            <i class="fas fa-arrow-left me-2"></i> Previous
-                        </button>
-                        <div>
-                            <button type="button" id="nextBtn" class="btn btn-primary px-4 py-2 rounded-pill">
-                                Next <i class="fas fa-arrow-right ms-2"></i>
-                            </button>
-                            <button type="button" id="submitBtn" class="btn btn-success px-4 py-2 rounded-pill d-none">
-                                <i class="fas fa-check me-2"></i> Finish Quiz
-                            </button>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" id="prevBtn" class="btn btn-outline-secondary" disabled>Previous</button>
+                            <button type="button" id="nextBtn" class="btn btn-outline-primary">Next</button>
+                            <button type="submit" id="submitBtn" class="btn btn-success" style="display: none;">Submit Quiz</button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-
-                <!-- Question Navigation Dots -->
-                <div class="question-dots d-flex justify-content-center flex-wrap gap-2 mb-4">
-                    {% for question in questions %}
-                    <div class="question-dot rounded-circle" data-index="{{ forloop.counter0 }}"></div>
-                    {% endfor %}
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Time's Up Modal -->
-<div class="modal fade" id="timeUpModal" tabindex="-1" aria-labelledby="timeUpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title" id="timeUpModalLabel">Time's Up!</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <div class="mb-3">
-                    <i class="fas fa-hourglass-end fa-3x text-warning mb-3"></i>
-                    <h4 class="mb-3">Time's up for this question</h4>
-                    <p class="text-muted">Your current answer has been recorded.</p>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-primary px-4 py-2 rounded-pill w-100" id="continueBtn">Continue to Next Question</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quiz Completion Modal -->
-<div class="modal fade" id="quizCompletionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Submit Quiz</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4">
-                <div class="text-center mb-4">
-                    <i class="fas fa-clipboard-check fa-3x text-primary mb-3"></i>
-                    <h4>Ready to submit?</h4>
-                    <p class="text-muted">You won't be able to change your answers after submission.</p>
-                </div>
-                
-                <div id="answersOverview" class="bg-light p-3 rounded mb-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Total Questions:</span>
-                        <span>{{ questions|length }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Answered:</span>
-                        <span id="answeredCount">0</span>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Unanswered:</span>
-                        <span id="unansweredCount">{{ questions|length }}</span>
-                    </div>
-                </div>
-                
-                <div id="unansweredWarning" class="alert alert-warning d-none">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    You still have unanswered questions. You can go back to answer them or submit as is.
-                </div>
-            </div>
-            <div class="modal-footer border-0 d-flex flex-column gap-2">
-                <button type="button" class="btn btn-success px-4 py-2 rounded-pill w-100" id="confirmSubmitBtn">
-                    <i class="fas fa-paper-plane me-2"></i> Submit Quiz
-                </button>
-                <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-pill w-100" data-bs-dismiss="modal">
-                    Review Answers
-                </button>
             </div>
         </div>
     </div>
@@ -177,351 +54,144 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM Elements
     const quizForm = document.getElementById('quizForm');
-    const questionsContainer = document.getElementById('questionsContainer');
-    const questionCards = document.querySelectorAll('.question-card');
-    const questionDots = document.querySelectorAll('.question-dot');
-    const progressBar = document.getElementById('progressBar');
-    const timerElement = document.getElementById('timer');
-    const currentQuestionNum = document.getElementById('currentQuestionNum');
-    const prevBtn = document.getElementById('prevBtn');
+    const totalTimeTakenInput = document.getElementById('totalTimeTaken');
+    const timeLimitPerQuestion = {{ quiz.time_limit_per_question }};
+    const totalQuestions = {{ questions|length }};
+    const totalTimeLimit = timeLimitPerQuestion * totalQuestions;
+    let timeRemaining = totalTimeLimit;
+    let currentQuestionIndex = 0;
+    const questions = document.querySelectorAll('.question');
+    let questionTimers = {};
+
+    // Show the first question
+    if (questions.length > 0) {
+        questions[0].style.display = 'block';
+    }
+
+    // Handle single-question quiz: show Submit, hide Next
     const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
-    const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
-    const continueBtn = document.getElementById('continueBtn');
-    const answeredCount = document.getElementById('answeredCount');
-    const unansweredCount = document.getElementById('unansweredCount');
-    const unansweredWarning = document.getElementById('unansweredWarning');
-    
-    // Variables
-    const totalQuestions = {{ questions|length }};
-    const timeLimit = {{ quiz.time_limit_per_question }}; // Time limit in seconds per question
-    let currentQuestion = 0;
-    let timerInterval;
-    let questionTimer = timeLimit;
-    let totalTimeTaken = 0;
-    let answeredQuestions = {};
-    let visitedQuestions = new Set([0]); // Track which questions were visited
-    
-    // Initialize quiz
-    updateNavigationButtons();
-    updateProgressBar();
-    updateQuestionDots();
-    startTimer();
-    
-    // Event Listeners
-    prevBtn.addEventListener('click', goToPreviousQuestion);
-    nextBtn.addEventListener('click', goToNextQuestion);
-    submitBtn.addEventListener('click', showCompletionModal);
-    confirmSubmitBtn.addEventListener('click', submitQuiz);
-    continueBtn.addEventListener('click', handleTimesUp);
-    
-    // Add click event for question dots
-    questionDots.forEach((dot, index) => {
-        dot.addEventListener('click', function() {
-            goToQuestion(index);
-        });
+    if (totalQuestions === 1) {
+        nextBtn.style.display = 'none';
+        submitBtn.style.display = 'block';
+    }
+
+    // Initialize timers for each question
+    questions.forEach(questionDiv => {
+        const questionId = questionDiv.getAttribute('data-question-id');
+        const timeTakenInput = document.getElementById(`timeTaken_${questionId}`);
+        let timeElapsed = 0;
+        let interval;
+
+        questionTimers[questionId] = {
+            start: function() {
+                if (!interval) {
+                    interval = setInterval(() => {
+                        timeElapsed++;
+                        timeTakenInput.value = timeElapsed;
+                        updateTotalTime();
+                    }, 1000);
+                }
+            },
+            stop: function() {
+                if (interval) {
+                    clearInterval(interval);
+                    interval = null;
+                }
+            }
+        };
     });
-    
-    // Radio button change event for all questions
-    document.querySelectorAll('input[type="radio"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const questionId = this.name.replace('question_', '');
-            const questionCardElement = this.closest('.question-card');
-            const questionIndex = parseInt(questionCardElement.dataset.questionIndex);
-            
-            // Store answer with question ID as key
-            answeredQuestions[questionId] = {
-                text: this.value,
-                optionId: this.dataset.optionId
-            };
-            
-            // Highlight the selected option
-            const options = document.querySelectorAll(`input[name="${this.name}"]`);
-            options.forEach(option => {
-                option.closest('.custom-option').classList.remove('selected');
-            });
-            this.closest('.custom-option').classList.add('selected');
-            
-            // Update question dot to show it's answered
-            updateQuestionDotStatus(questionIndex, true);
-            
-            // Update answered count in modal
-            updateAnswersCount();
-        });
+
+    // Start timer for the current question
+    function startCurrentQuestionTimer() {
+        const currentQuestionId = questions[currentQuestionIndex].getAttribute('data-question-id');
+        questionTimers[currentQuestionId].start();
+    }
+
+    // Stop all timers
+    function stopAllTimers() {
+        Object.values(questionTimers).forEach(timer => timer.stop());
+    }
+
+    // Update total time
+    function updateTotalTime() {
+        const totalTimeElapsed = Array.from(questions).reduce((sum, questionDiv) => {
+            const questionId = questionDiv.getAttribute('data-question-id');
+            const timeTakenInput = document.getElementById(`timeTaken_${questionId}`);
+            return sum + parseInt(timeTakenInput.value || 0);
+        }, 0);
+        totalTimeTakenInput.value = totalTimeElapsed;
+    }
+
+    // Countdown timer
+    const timerInterval = setInterval(() => {
+        if (timeRemaining > 0) {
+            timeRemaining--;
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            document.getElementById('timeRemaining').textContent = 
+                `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        } else {
+            clearInterval(timerInterval);
+            stopAllTimers();
+            quizForm.submit();
+        }
+    }, 1000);
+
+    // Navigation
+    nextBtn.addEventListener('click', () => {
+        if (currentQuestionIndex < totalQuestions - 1) {
+            questions[currentQuestionIndex].style.display = 'none';
+            currentQuestionIndex++;
+            questions[currentQuestionIndex].style.display = 'block';
+            startCurrentQuestionTimer();
+            document.getElementById('prevBtn').disabled = false;
+            if (currentQuestionIndex === totalQuestions - 1) {
+                nextBtn.style.display = 'none';
+                submitBtn.style.display = 'block';
+            }
+        }
     });
-    
-    // Functions
-    function goToQuestion(index) {
-        if (index >= 0 && index < totalQuestions) {
-            hideCurrentQuestion();
-            currentQuestion = index;
-            showCurrentQuestion();
-            updateNavigationButtons();
-            updateProgressBar();
-            resetTimer();
-            
-            // Add to visited questions
-            visitedQuestions.add(index);
-        }
-    }
-    
-    function goToNextQuestion() {
-        if (currentQuestion < totalQuestions - 1) {
-            goToQuestion(currentQuestion + 1);
-        }
-    }
-    
-    function goToPreviousQuestion() {
-        if (currentQuestion > 0) {
-            goToQuestion(currentQuestion - 1);
-        }
-    }
-    
-    function hideCurrentQuestion() {
-        questionCards[currentQuestion].classList.add('d-none');
-    }
-    
-    function showCurrentQuestion() {
-        questionCards[currentQuestion].classList.remove('d-none');
-        currentQuestionNum.textContent = currentQuestion + 1;
-    }
-    
-    function updateNavigationButtons() {
-        prevBtn.disabled = currentQuestion === 0;
-        
-        if (currentQuestion === totalQuestions - 1) {
-            nextBtn.classList.add('d-none');
-            submitBtn.classList.remove('d-none');
-        } else {
-            nextBtn.classList.remove('d-none');
-            submitBtn.classList.add('d-none');
-        }
-    }
-    
-    function updateProgressBar() {
-        const progress = ((currentQuestion + 1) / totalQuestions) * 100;
-        progressBar.style.width = `${progress}%`;
-    }
-    
-    function updateQuestionDots() {
-        questionDots.forEach((dot, index) => {
-            if (index === currentQuestion) {
-                dot.classList.add('current');
-            } else {
-                dot.classList.remove('current');
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentQuestionIndex > 0) {
+            questions[currentQuestionIndex].style.display = 'none';
+            currentQuestionIndex--;
+            questions[currentQuestionIndex].style.display = 'block';
+            startCurrentQuestionTimer();
+            nextBtn.style.display = 'block';
+            submitBtn.style.display = 'none';
+            if (currentQuestionIndex === 0) {
+                document.getElementById('prevBtn').disabled = true;
             }
-        });
-    }
-    
-    function updateQuestionDotStatus(index, isAnswered) {
-        if (isAnswered) {
-            questionDots[index].classList.add('answered');
-        } else {
-            questionDots[index].classList.remove('answered');
         }
-    }
-    
-    function updateAnswersCount() {
-        const answered = Object.keys(answeredQuestions).length;
-        const unanswered = totalQuestions - answered;
-        
-        answeredCount.textContent = answered;
-        unansweredCount.textContent = unanswered;
-        
-        if (unanswered > 0) {
-            unansweredWarning.classList.remove('d-none');
-        } else {
-            unansweredWarning.classList.add('d-none');
-        }
-    }
-    
-    function startTimer() {
-        questionTimer = timeLimit;
-        updateTimerDisplay();
-        
-        clearInterval(timerInterval);
-        timerInterval = setInterval(function() {
-            questionTimer--;
-            totalTimeTaken++;
-            updateTimerDisplay();
+    });
+
+    // Start timer for the first question
+    startCurrentQuestionTimer();
+
+    // Form submission
+    quizForm.addEventListener('submit', function(e) {
+        stopAllTimers();
+        const answers = {};
+        questions.forEach(questionDiv => {
+            const questionId = questionDiv.getAttribute('data-question-id');
+            const selectedOption = questionDiv.querySelector('input[type="radio"]:checked');
+            const timeTakenInput = document.getElementById(`timeTaken_${questionId}`);
             
-            if (questionTimer <= 0) {
-                clearInterval(timerInterval);
-                showTimesUpModal();
-            }
-        // Continuing from where the provided code left off
-        }, 1000);
-    }
-    
-    function updateTimerDisplay() {
-        const minutes = Math.floor(questionTimer / 60);
-        const seconds = questionTimer % 60;
-        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        // Change timer color when time is running low
-        if (questionTimer <= 10) {
-            timerElement.classList.add('text-danger');
-        } else {
-            timerElement.classList.remove('text-danger');
-        }
-    }
-    
-    function resetTimer() {
-        clearInterval(timerInterval);
-        startTimer();
-    }
-    
-    function showTimesUpModal() {
-        // Record current answer if any is selected
-        const questionCard = questionCards[currentQuestion];
-        const questionId = questionCard.dataset.questionId;
-        const selectedOption = questionCard.querySelector('input[type="radio"]:checked');
-        
-        if (selectedOption) {
-            answeredQuestions[questionId] = {
-                text: selectedOption.value,
-                optionId: selectedOption.dataset.optionId
+            answers[questionId] = {
+                optionId: selectedOption ? selectedOption.value : null,
+                timeTaken: parseInt(timeTakenInput.value) || 0
             };
-            updateQuestionDotStatus(currentQuestion, true);
-        }
-        
-        // Show modal
-        const timeUpModal = new bootstrap.Modal(document.getElementById('timeUpModal'));
-        timeUpModal.show();
-    }
-    
-    function handleTimesUp() {
-        // Close modal
-        const timeUpModal = bootstrap.Modal.getInstance(document.getElementById('timeUpModal'));
-        timeUpModal.hide();
-        
-        // Go to next question or end quiz
-        if (currentQuestion < totalQuestions - 1) {
-            goToNextQuestion();
-        } else {
-            showCompletionModal();
-        }
-    }
-    
-    function showCompletionModal() {
-        updateAnswersCount();
-        const completionModal = new bootstrap.Modal(document.getElementById('quizCompletionModal'));
-        completionModal.show();
-    }
-    
-    function submitQuiz() {
-        // Prepare the answers JSON for submission
-        document.getElementById('answers').value = JSON.stringify(answeredQuestions);
-        document.getElementById('timeTaken').value = totalTimeTaken;
-        
-        // Submit the form
-        quizForm.submit();
-    }
-    
-    // Update all question dots based on visited and answered status
-    function updateAllQuestionDots() {
-        questionDots.forEach((dot, index) => {
-            // Add visited class
-            if (visitedQuestions.has(index)) {
-                dot.classList.add('visited');
-            }
-            
-            // Add answered class if this question is answered
-            const questionCard = questionCards[index];
-            const questionId = questionCard.dataset.questionId;
-            if (answeredQuestions[questionId]) {
-                dot.classList.add('answered');
-            }
-            
-            // Add current class for current question
-            if (index === currentQuestion) {
-                dot.classList.add('current');
-            } else {
-                dot.classList.remove('current');
-            }
         });
-    }
-    
-    // Initialize all dots with proper status
-    updateAllQuestionDots();
+        
+        const answersInput = document.createElement('input');
+        answersInput.type = 'hidden';
+        answersInput.name = 'answers';
+        answersInput.value = JSON.stringify(answers);
+        quizForm.appendChild(answersInput);
+    });
 });
 </script>
-
-<style>
-    /* Custom styling for options */
-    .custom-option label {
-        border: 1px solid #dee2e6;
-        position: relative;
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    
-    .custom-option label:hover {
-        background-color: rgba(13, 110, 253, 0.05);
-        border-color: #c2d6f8;
-    }
-    
-    .custom-option.selected label {
-        background-color: rgba(13, 110, 253, 0.1);
-        border-color: #0d6efd;
-    }
-    
-    .option-indicator {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background-color: #f0f0f0;
-        font-weight: 500;
-    }
-    
-    .custom-option.selected .option-indicator {
-        background-color: #0d6efd;
-        color: white;
-    }
-    
-    /* Question navigation dots */
-    .question-dot {
-        width: 16px;
-        height: 16px;
-        background-color: #dee2e6;
-        cursor: pointer;
-        position: relative;
-        transition: all 0.2s ease;
-    }
-    
-    .question-dot.visited {
-        background-color: #adb5bd;
-    }
-    
-    .question-dot.answered {
-        background-color: #0dcaf0;
-    }
-    
-    .question-dot.current {
-        transform: scale(1.5);
-        background-color: #0d6efd;
-        z-index: 1;
-    }
-    
-    /* Timer styling */
-    .timer-container {
-        border: 1px solid #dee2e6;
-    }
-    
-    #timer.text-danger {
-        animation: pulse 1s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-</style>
 {% endblock %}

@@ -258,7 +258,7 @@
                                             {% if participation.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
                                         </span>
                                     </td>
-                                    <td>{{ participation.time_taken|floatformat:1 }} sec</td>
+                                    <td>{{ participation.total_time_taken|floatformat:1 }} sec</td>
                                     <td>{{ participation.attempt_count }}</td>
                                     <td>{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
                                 </tr>
@@ -286,7 +286,6 @@
 {% endfor %}
 
 <script>
-    // Set up delete quiz confirmation modal
     document.addEventListener('DOMContentLoaded', function() {
         const deleteModal = document.getElementById('deleteQuizModal');
         const deleteForm = document.getElementById('deleteQuizForm');
