@@ -156,7 +156,7 @@
                                         {% if participation.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
                                     </span>
                                 </td>
-                                <td class="px-3 py-2">{{ participation.time_taken|floatformat:1 }} sec</td>
+                                <td class="px-3 py-2">{{ participation.total_time_taken|floatformat:1 }} sec</td>
                                 <td class="px-3 py-2">{{ participation.attempts }}</td>
                                 <td class="px-3 py-2">{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
                             </tr>
