@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Quiz, Question, Option, Participation
+from .models import Quiz, Question, Option, Participation, Answer
 
 class OptionInline(admin.TabularInline):
     model = Option
@@ -29,3 +29,4 @@ admin.site.register(Quiz, QuizAdmin)
 admin.site.register(Question, QuestionAdmin)
 admin.site.register(Option)
 admin.site.register(Participation, ParticipationAdmin)
+admin.site.register(Answer)
