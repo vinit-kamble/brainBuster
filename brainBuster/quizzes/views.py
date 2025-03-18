@@ -31,21 +31,15 @@ def dashboard(request):
     for quiz in created_quizzes:
         all_participations = list(quiz.participations.all().select_related('user').order_by('user__id', '-submitted_at'))
         
-        # Filter to most recent participation per user and count attempts
+        # Filter to most recent participation per user
         unique_users = {}
-        user_attempts = {}
         for participation in all_participations:
             user_id = participation.user.id
             if user_id not in unique_users:
                 unique_users[user_id] = participation
-            user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
         
         participations = list(unique_users.values())
-        for participation in participations:
-            participation.attempt_count = user_attempts[participation.user.id]
-        
         quiz.total_participants = len(participations)
-        quiz.participations_filtered = participations  # For modal
         if quiz.total_participants > 0:
             quiz.avg_score = round(sum(p.score for p in participations) / quiz.total_participants, 1)
             passing_participants = sum(1 for p in participations if p.score >= quiz.minimum_score_percentage)

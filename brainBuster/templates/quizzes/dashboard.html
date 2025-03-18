@@ -87,10 +87,8 @@
                                 </td>
                                 <td class="border-bottom px-3 py-2"><span class="badge bg-primary">{{ quiz.code }}</span></td>
                                 <td class="border-bottom px-3 py-2">
-                                    <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#participantsModal{{ quiz.id }}">
-                                        {{ quiz.total_participants }}
-                                        <i class="fas fa-user-friends ms-1 text-muted"></i>
-                                    </a>
+                                    {{ quiz.total_participants }}
+                                    <i class="fas fa-user-friends ms-1 text-muted"></i>
                                 </td>
                                 <td class="border-bottom px-3 py-2">
                                     {% if quiz.total_participants > 0 %}
@@ -224,75 +222,6 @@
     </div>
 </div>
 
-<!-- Participants Modal for each quiz -->
-{% for quiz in created_quizzes %}
-<div class="modal fade" id="participantsModal{{ quiz.id }}" tabindex="-1" aria-labelledby="participantsModalLabel{{ quiz.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="participantsModalLabel{{ quiz.id }}">
-                    <i class="fas fa-{{ quiz.icon|default:'question-circle' }} me-2"></i>
-                    {{ quiz.title }} - Participants
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                {% if quiz.participations_filtered %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Participant</th>
-                                    <th>Score</th>
-                                    <th>Result</th>
-                                    <th>Time Taken</th>
-                                    <th>Attempts</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for participation in quiz.participations_filtered %}
-                                <tr>
-                                    <td>{{ participation.user.username }}</td>
-                                    <td>
-                                        <div class="progress" style="height: 8px;">
-                                            <div class="progress-bar {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
-                                                role="progressbar" style="width: {{ participation.score|floatformat:0 }}%;">
-                                            </div>
-                                        </div>
-                                        <small class="text-muted">{{ participation.score|floatformat:1 }}%</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge {% if participation.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
-                                            {% if participation.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
-                                        </span>
-                                    </td>
-                                    <td>{{ participation.total_time_taken|floatformat:1 }} sec</td>
-                                    <td>{{ participation.attempt_count }}</td>
-                                    <td>{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                        <h4>No participants yet</h4>
-                        <p class="text-muted">Share your quiz code to get started!</p>
-                    </div>
-                {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary copy-code-btn" data-code="{{ quiz.code }}">
-                    <i class="fas fa-copy me-1"></i> Copy Quiz Code
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
