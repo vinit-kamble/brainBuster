@@ -12,24 +12,46 @@ from django.utils import timezone
 def dashboard(request):
     """Display the user's dashboard with created and participated quizzes."""
     created_quizzes = Quiz.objects.filter(created_by=request.user)
-    participated_quizzes = request.user.participations.all().select_related('quiz')
+    all_participated_quizzes = request.user.participations.all().select_related('quiz')
     
-    # Calculate average score for participated quizzes
+    # Filter to most recent participation per quiz for "Your Activity" and stats
+    unique_quizzes = {}
+    for participation in all_participated_quizzes:
+        quiz_id = participation.quiz.id
+        if quiz_id not in unique_quizzes:
+            unique_quizzes[quiz_id] = participation
+    participated_quizzes = list(unique_quizzes.values())
+    
+    # Calculate average score for participated quizzes (based on unique quizzes)
     total_score = sum(p.score for p in participated_quizzes if p.score is not None)
-    total_quizzes = sum(1 for p in participated_quizzes if p.score is not None)
+    total_quizzes = len(participated_quizzes)
     average_score = round(total_score / total_quizzes, 1) if total_quizzes > 0 else 0
     
-    # Calculate metrics for each created quiz
+    # Calculate metrics for each created quiz using only the most recent participation per user
     for quiz in created_quizzes:
-        participations = list(quiz.participations.all())
-        total_participants = len(participations)
+        all_participations = list(quiz.participations.all().select_related('user').order_by('user__id', '-submitted_at'))
         
-        if total_participants > 0:
-            quiz.avg_score = round(sum(p.score for p in participations) / total_participants, 1)
+        # Filter to most recent participation per user and count attempts
+        unique_users = {}
+        user_attempts = {}
+        for participation in all_participations:
+            user_id = participation.user.id
+            if user_id not in unique_users:
+                unique_users[user_id] = participation
+            user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
+        
+        participations = list(unique_users.values())
+        for participation in participations:
+            participation.attempt_count = user_attempts[participation.user.id]
+        
+        quiz.total_participants = len(participations)
+        quiz.participations_filtered = participations  # For modal
+        if quiz.total_participants > 0:
+            quiz.avg_score = round(sum(p.score for p in participations) / quiz.total_participants, 1)
             passing_participants = sum(1 for p in participations if p.score >= quiz.minimum_score_percentage)
-            quiz.pass_rate = round((passing_participants / total_participants) * 100, 1)
+            quiz.pass_rate = round((passing_participants / quiz.total_participants) * 100, 1)
             total_time = sum(p.total_time_taken for p in participations if p.total_time_taken is not None)
-            quiz.avg_time = round(total_time / total_participants, 1)
+            quiz.avg_time = round(total_time / quiz.total_participants, 1)
         else:
             quiz.avg_score = 0
             quiz.pass_rate = 0
@@ -39,6 +61,7 @@ def dashboard(request):
         'created_quizzes': created_quizzes,
         'participated_quizzes': participated_quizzes,
         'average_score': average_score,
+        'total_quizzes': total_quizzes,
     })
 
 @login_required
