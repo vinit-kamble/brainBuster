@@ -4,12 +4,20 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView
 from .forms import CustomLoginForm, SignupForm
+from django.contrib import messages
 
 class CustomLoginView(LoginView):
     authentication_form = CustomLoginForm
     template_name = 'accounts/login.html'
     redirect_authenticated_user = True
     success_url = reverse_lazy('quiz_dashboard')
+
+    def form_valid(self, form):
+        """Handle successful login and check for anonymous quiz result."""
+        response = super().form_valid(form)  # Logs in the user
+        if 'anonymous_quiz_result' in self.request.session:
+            return redirect('save_anonymous_result')  # Redirect to save the result
+        return response
 
 def signup_view(request):
     if request.method == 'POST':
@@ -22,6 +30,10 @@ def signup_view(request):
                 user.profile.terms_accepted = True
                 user.profile.save()
             login(request, user)
+            messages.success(request, 'Account created successfully!')
+            # Check for anonymous result and save it
+            if 'anonymous_quiz_result' in request.session:
+                return redirect('save_anonymous_result')
             return redirect('quiz_dashboard')
     else:
         form = SignupForm()

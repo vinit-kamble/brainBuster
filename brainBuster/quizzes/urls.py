@@ -11,4 +11,5 @@ urlpatterns = [
     path('quiz/<int:quiz_id>/play/', views.play_quiz, name='play_quiz'),
     path('quiz/<int:quiz_id>/results/<int:participation_id>/', views.quiz_results, name='quiz_results'),
     path('quiz/<int:quiz_id>/stats/', views.quiz_stats, name='quiz_stats'),
+    path('save-anonymous-result/', views.save_anonymous_result, name='save_anonymous_result'),
 ]

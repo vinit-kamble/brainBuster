@@ -238,22 +238,30 @@ def play_quiz(request, quiz_id):
                 
                 return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
             else:
-                # Anonymous users
+                # Anonymous users: Calculate score and store in session
+                answers_data = {}
                 for question_id, answer_data in user_answers.items():
                     question = Question.objects.get(id=question_id)
                     option_id = answer_data.get('optionId')
+                    time_taken = answer_data.get('timeTaken', 0)
                     
                     selected_option = Option.objects.get(id=option_id) if option_id else None
                     is_correct = selected_option.is_correct if selected_option else False
                     if is_correct:
                         score += 1
+                    
+                    answers_data[question_id] = {
+                        'option_id': option_id,
+                        'time_taken': time_taken
+                    }
                 
                 percentage_score = (score / total_questions * 100) if total_questions > 0 else 0
                 request.session['anonymous_quiz_result'] = {
                     'quiz_id': quiz.id,
                     'score': percentage_score,
                     'total_time_taken': total_time_taken,
-                    'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    'answers': answers_data,
+                    'submitted_at': timezone.now().isoformat()
                 }
                 return redirect('quiz_results', quiz_id=quiz.id, participation_id=0)
             
@@ -284,7 +292,7 @@ def quiz_results(request, quiz_id, participation_id):
             def __init__(self, data):
                 self.score = data.get('score', 0)
                 self.total_time_taken = data.get('total_time_taken', 0)
-                self.submitted_at = datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')), '%Y-%m-%d %H:%M:%S')
+                self.submitted_at = datetime.fromisoformat(data.get('submitted_at', timezone.now().isoformat()))
                 self.is_anonymous = True
         
         participation = AnonymousParticipation(anonymous_result)
@@ -382,3 +390,45 @@ def quiz_stats(request, quiz_id):
         'average_attempts': average_attempts,
         'questions': questions,
     })
+
+@login_required
+def save_anonymous_result(request):
+    """Save anonymous quiz result to the user's account after login/signup."""
+    anonymous_result = request.session.get('anonymous_quiz_result')
+    if not anonymous_result or str(anonymous_result.get('quiz_id')) not in [str(q.id) for q in Quiz.objects.all()]:
+        return redirect('dashboard')
+    
+    quiz = get_object_or_404(Quiz, id=anonymous_result['quiz_id'])
+    
+    # Calculate attempt number
+    previous_attempts = Participation.objects.filter(user=request.user, quiz=quiz).count()
+    attempt_number = previous_attempts + 1
+    
+    # Create participation
+    participation = Participation.objects.create(
+        user=request.user,
+        quiz=quiz,
+        score=anonymous_result['score'],
+        total_time_taken=anonymous_result['total_time_taken'],
+        submitted_at=datetime.fromisoformat(anonymous_result['submitted_at']),
+        attempt_number=attempt_number
+    )
+    
+    # Save answers
+    for question_id, answer_data in anonymous_result['answers'].items():
+        question = Question.objects.get(id=question_id)
+        option_id = answer_data['option_id']
+        time_taken = answer_data['time_taken']
+        
+        selected_option = Option.objects.get(id=option_id) if option_id else None
+        Answer.objects.create(
+            participation=participation,
+            question=question,
+            selected_option=selected_option,
+            time_taken=time_taken
+        )
+    
+    # Clear session data
+    del request.session['anonymous_quiz_result']
+    messages.success(request, 'Your quiz result has been saved to your account!')
+    return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
