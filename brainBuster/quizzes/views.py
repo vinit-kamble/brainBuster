@@ -12,7 +12,7 @@ from django.utils import timezone
 def dashboard(request):
     """Display the user's dashboard with created and participated quizzes."""
     created_quizzes = Quiz.objects.filter(created_by=request.user)
-    all_participated_quizzes = request.user.participations.all().select_related('quiz')
+    all_participated_quizzes = request.user.participations.all().select_related('quiz').order_by('-submitted_at')
     
     # Filter to most recent participation per quiz for "Your Activity" and stats
     unique_quizzes = {}
@@ -21,6 +21,16 @@ def dashboard(request):
         if quiz_id not in unique_quizzes:
             unique_quizzes[quiz_id] = participation
     participated_quizzes = list(unique_quizzes.values())
+    
+    # Calculate total attempts per quiz and attach to each participation
+    quiz_attempts = {}
+    for participation in all_participated_quizzes:
+        quiz_id = participation.quiz.id
+        quiz_attempts[quiz_id] = quiz_attempts.get(quiz_id, 0) + 1
+    for participation in participated_quizzes:
+        participation.attempts = quiz_attempts[participation.quiz.id]
+        # Add pass/fail status
+        participation.status = "PASS" if participation.score >= participation.quiz.minimum_score_percentage else "FAIL"
     
     # Calculate average score for participated quizzes (based on unique quizzes)
     total_score = sum(p.score for p in participated_quizzes if p.score is not None)
@@ -54,6 +64,7 @@ def dashboard(request):
     return render(request, 'quizzes/dashboard.html', {
         'created_quizzes': created_quizzes,
         'participated_quizzes': participated_quizzes,
+        'all_participated_quizzes': all_participated_quizzes,  # For modal
         'average_score': average_score,
         'total_quizzes': total_quizzes,
     })
