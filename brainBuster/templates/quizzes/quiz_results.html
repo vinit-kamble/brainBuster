@@ -46,7 +46,7 @@
                             <div class="border rounded p-3 h-100">
                                 <h5 class="mb-3">Score</h5>
                                 <div class="display-4 fw-bold {% if score_percentage >= 60 %}text-success{% elif score_percentage >= 40 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ score_percentage|floatformat:1 }}%
+                                    {{ score_percentage|floatformat:0 }}%
                                 </div>
                             </div>
                         </div>
@@ -71,34 +71,6 @@
                                 <h5 class="mb-3">Result</h5>
                                 <div class="display-4 fw-bold {% if score_percentage >= quiz.minimum_score_percentage %}text-success{% else %}text-danger{% endif %}">
                                     {% if score_percentage >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Score Display -->
-                    <div class="row text-center">
-                        <div class="col-md-4 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <h5 class="mb-3">Score</h5>
-                                <div class="display-4 fw-bold {% if score_percentage >= 60 %}text-success{% elif score_percentage >= 40 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ score_percentage|floatformat:1 }}%
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <h5 class="mb-3">Correct</h5>
-                                <div class="display-4 fw-bold text-primary">
-                                    {{ correct_answers }}/{{ total_questions }}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="border rounded p-3 h-100">
-                                <h5 class="mb-3">Percentile</h5>
-                                <div class="display-4 fw-bold text-info">
-                                    {% widthratio score_percentage 1 1 %}
                                 </div>
                             </div>
                         </div>
