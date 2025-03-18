@@ -239,6 +239,15 @@ def play_quiz(request, quiz_id):
                 return redirect('quiz_results', quiz_id=quiz.id, participation_id=participation.id)
             else:
                 # Anonymous users
+                for question_id, answer_data in user_answers.items():
+                    question = Question.objects.get(id=question_id)
+                    option_id = answer_data.get('optionId')
+                    
+                    selected_option = Option.objects.get(id=option_id) if option_id else None
+                    is_correct = selected_option.is_correct if selected_option else False
+                    if is_correct:
+                        score += 1
+                
                 percentage_score = (score / total_questions * 100) if total_questions > 0 else 0
                 request.session['anonymous_quiz_result'] = {
                     'quiz_id': quiz.id,
