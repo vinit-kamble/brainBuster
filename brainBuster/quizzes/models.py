@@ -44,12 +44,10 @@ class Participation(models.Model):
     score = models.FloatField(default=0.0)
     submitted_at = models.DateTimeField(auto_now=True)
     total_time_taken = models.IntegerField(default=0, help_text="Total time taken for the quiz in seconds")
-    
-    class Meta:
-        unique_together = ('user', 'quiz')
+    attempt_number = models.IntegerField(default=1, help_text="The attempt number for this user on this quiz")
     
     def __str__(self):
-        return f"{self.user.username} - {self.quiz.title}"
+        return f"{self.user.username} - {self.quiz.title} (Attempt {self.attempt_number})"
 
 class Answer(models.Model):
     participation = models.ForeignKey(Participation, related_name='answers', on_delete=models.CASCADE)

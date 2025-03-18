@@ -25,12 +25,9 @@ def dashboard(request):
         total_participants = len(participations)
         
         if total_participants > 0:
-            # Average score per quiz
             quiz.avg_score = round(sum(p.score for p in participations) / total_participants, 1)
-            # Pass rate
             passing_participants = sum(1 for p in participations if p.score >= quiz.minimum_score_percentage)
             quiz.pass_rate = round((passing_participants / total_participants) * 100, 1)
-            # Average total time per quiz
             total_time = sum(p.total_time_taken for p in participations if p.total_time_taken is not None)
             quiz.avg_time = round(total_time / total_participants, 1)
         else:
@@ -58,24 +55,11 @@ def create_quiz(request, quiz_id=None):
         title = request.POST.get('quiz_title')
         description = request.POST.get('quiz_description', '')
         icon = request.POST.get('quiz_icon', 'question-circle')
-        time_limit = request.POST.get('time_limit_seconds', 20)
-        minimum_score_percentage = request.POST.get('minimum_score_percentage', 60)
+        time_limit = request.POST.get('time_limit_seconds', 30)
         quiz_data_json = request.POST.get('quiz_data')
         
         if not title:
             messages.error(request, 'Quiz title is required.')
-            return render(request, 'quizzes/create_quiz.html', {'quiz': quiz, 'is_editing': is_editing})
-
-        # Validate minimum_score_percentage
-        try:
-            if minimum_score_percentage is not None:
-                minimum_score_percentage = int(minimum_score_percentage)
-                if not 0 <= minimum_score_percentage <= 100:
-                    raise ValueError
-            else:
-                minimum_score_percentage = 0  # Default value if not provided
-        except (ValueError, TypeError):
-            messages.error(request, 'Minimum score to pass must be an integer between 0 and 100.')
             return render(request, 'quizzes/create_quiz.html', {'quiz': quiz, 'is_editing': is_editing})
 
         try:
@@ -86,10 +70,8 @@ def create_quiz(request, quiz_id=None):
                 quiz.description = description
                 quiz.icon = icon
                 quiz.time_limit_per_question = time_limit
-                quiz.minimum_score_percentage = minimum_score_percentage
                 quiz.save()
                 
-                # Clear existing questions and options
                 for question in Question.objects.filter(quiz=quiz):
                     Option.objects.filter(question=question).delete()
                 Question.objects.filter(quiz=quiz).delete()
@@ -101,12 +83,10 @@ def create_quiz(request, quiz_id=None):
                     description=description,
                     icon=icon,
                     time_limit_per_question=time_limit,
-                    minimum_score_percentage=minimum_score_percentage,
                     created_by=request.user
                 )
                 messages.success(request, 'Quiz created successfully!')
 
-            # Create new questions and options
             for q_data in quiz_data['questions']:
                 question = Question.objects.create(
                     quiz=quiz,
@@ -172,11 +152,10 @@ def join_quiz(request):
             quiz = Quiz.objects.get(code=code)
             
             if request.user.is_authenticated:
-                if quiz.participations.filter(user=request.user).exists():
-                    messages.info(request, f'You have already joined this quiz: {quiz.title}')
-                else:
-                    quiz.participations.create(user=request.user)
+                if not quiz.participations.filter(user=request.user).exists():
                     messages.success(request, f'Joined quiz: {quiz.title}')
+                else:
+                    messages.info(request, f'You have already joined this quiz: {quiz.title}')
 
             return redirect('play_quiz', quiz_id=quiz.id)
         
@@ -192,11 +171,6 @@ def play_quiz(request, quiz_id):
     if request.user.is_authenticated:
         is_creator = quiz.created_by == request.user
         is_participant = quiz.participations.filter(user=request.user).exists()
-        
-        if not is_participant and not is_creator:
-            quiz.participations.create(user=request.user)
-            is_participant = True
-            messages.success(request, f'You have joined: {quiz.title}')
     else:
         is_creator = False
         is_participant = False
@@ -210,19 +184,19 @@ def play_quiz(request, quiz_id):
             total_questions = quiz.questions.count()
             
             if request.user.is_authenticated:
-                participation, created = Participation.objects.update_or_create(
+                # Calculate the next attempt number
+                previous_attempts = Participation.objects.filter(user=request.user, quiz=quiz).count()
+                attempt_number = previous_attempts + 1
+                
+                # Create a new participation for this attempt
+                participation = Participation.objects.create(
                     user=request.user,
                     quiz=quiz,
-                    defaults={
-                        'score': 0,  # Will update after calculation
-                        'total_time_taken': total_time_taken,
-                        'submitted_at': timezone.now()
-                    }
+                    score=0,  # Will update after calculation
+                    total_time_taken=total_time_taken,
+                    submitted_at=timezone.now(),
+                    attempt_number=attempt_number
                 )
-                
-                # Delete previous answers if updating
-                if not created:
-                    Answer.objects.filter(participation=participation).delete()
                 
                 for question_id, answer_data in user_answers.items():
                     question = Question.objects.get(id=question_id)
@@ -310,10 +284,27 @@ def quiz_results(request, quiz_id, participation_id):
 def quiz_stats(request, quiz_id):
     """Display detailed statistics for a quiz."""
     quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
-    participations = list(quiz.participations.all().select_related('user'))
     
+    # Get all participations, ordered by user and submission time (latest first)
+    all_participations = list(quiz.participations.all().select_related('user').order_by('user__id', '-submitted_at'))
+    
+    # Filter to most recent participation per user
+    unique_users = {}
+    for participation in all_participations:
+        user_id = participation.user.id
+        if user_id not in unique_users:
+            unique_users[user_id] = participation
+    
+    # List of most recent participations
+    participations = list(unique_users.values())
+    
+    # Calculate total attempts per user for display
+    user_attempts = {}
+    for participation in all_participations:
+        user_id = participation.user.id
+        user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
     for participation in participations:
-        participation.attempts = Participation.objects.filter(user=participation.user, quiz=quiz).count()
+        participation.attempts = user_attempts[participation.user.id]
     
     total_participants = len(participations)
     average_score = 0
@@ -327,17 +318,11 @@ def quiz_stats(request, quiz_id):
         pass_rate = (passing_participants / total_participants * 100)
         total_time = sum(p.total_time_taken for p in participations if p.total_time_taken is not None)
         average_time = total_time / total_participants if total_participants > 0 else 0
-        
-        user_attempts = {}
-        for p in participations:
-            user_id = p.user.id
-            if user_id not in user_attempts:
-                user_attempts[user_id] = Participation.objects.filter(user=p.user, quiz=quiz).count()
         average_attempts = sum(user_attempts.values()) / len(user_attempts) if user_attempts else 0
     
     questions = list(quiz.questions.all().prefetch_related('options'))
     for question in questions:
-        answers = Answer.objects.filter(question=question, participation__quiz=quiz)
+        answers = Answer.objects.filter(question=question, participation__in=participations)
         total_answers = answers.count()
         
         if total_answers > 0:
@@ -363,9 +348,11 @@ def quiz_stats(request, quiz_id):
     
     return render(request, 'quizzes/quiz_stats.html', {
         'quiz': quiz,
+        'participations': participations,  # Only latest per user
+        'all_participations': all_participations,  # For modal
         'average_score': average_score,
         'pass_rate': pass_rate,
         'average_time': average_time,
         'average_attempts': average_attempts,
-        'questions': questions
+        'questions': questions,
     })

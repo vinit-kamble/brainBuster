@@ -53,7 +53,7 @@
                             <ul class="list-unstyled">
                                 <li class="mb-2">
                                     <i class="fas fa-users me-2 text-primary"></i>
-                                    <strong>Total Participants:</strong> {{ quiz.participations.count }}
+                                    <strong>Total Participants:</strong> {{ participations|length }}
                                 </li>
                                 <li class="mb-2">
                                     <i class="fas fa-chart-line me-2 text-primary"></i>
@@ -126,7 +126,7 @@
                     <i class="fas fa-download me-1"></i> Export Data
                 </button>
             </h2>
-            {% if quiz.participations.count > 0 %}
+            {% if participations %}
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered" id="participantsTable">
                         <thead class="table-light">
@@ -140,7 +140,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for participation in quiz.participations.all %}
+                            {% for participation in participations %}
                             <tr>
                                 <td class="px-3 py-2">{{ participation.user.username }}</td>
                                 <td class="px-3 py-2">
@@ -157,7 +157,11 @@
                                     </span>
                                 </td>
                                 <td class="px-3 py-2">{{ participation.total_time_taken|floatformat:1 }} sec</td>
-                                <td class="px-3 py-2">{{ participation.attempts }}</td>
+                                <td class="px-3 py-2">
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#attemptsModal{{ participation.user.id }}">
+                                        <i class="fas fa-eye me-1"></i> {{ participation.attempts }}
+                                    </button>
+                                </td>
                                 <td class="px-3 py-2">{{ participation.submitted_at|date:"M d, Y H:i" }}</td>
                             </tr>
                             {% endfor %}
@@ -176,6 +180,65 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Attempts Modal for each user -->
+    {% for participation in participations %}
+    <div class="modal fade" id="attemptsModal{{ participation.user.id }}" tabindex="-1" aria-labelledby="attemptsModalLabel{{ participation.user.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attemptsModalLabel{{ participation.user.id }}">
+                        <i class="fas fa-user me-2"></i>
+                        {{ participation.user.username }} - All Attempts
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Attempt</th>
+                                    <th>Score</th>
+                                    <th>Status</th>
+                                    <th>Time Taken</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attempt in all_participations %}
+                                {% if attempt.user.id == participation.user.id %}
+                                <tr>
+                                    <td>{{ attempt.attempt_number }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar {% if attempt.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
+                                                role="progressbar" style="width: {{ attempt.score|floatformat:0 }}%;">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ attempt.score|floatformat:1 }}%</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if attempt.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if attempt.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ attempt.total_time_taken|floatformat:1 }} sec</td>
+                                    <td>{{ attempt.submitted_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <script>
