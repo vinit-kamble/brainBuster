@@ -1,98 +1,97 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid px-0">
     <!-- Hero Section -->
-    <div class="row align-items-center min-vh-75 py-5">
-        <div class="col-lg-6 order-lg-2 mb-5 mb-lg-0">
-            <div class="animation-container text-center">
-                <div class="text-center">
-                    <i class="fas fa-brain fa-8x text-primary mb-3"></i>
-                    <i class="fas fa-question-circle fa-6x text-info position-relative" style="left: -40px; top: 20px;"></i>
+    <section class="hero-section min-vh-100 d-flex align-items-center">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 text-center text-lg-start py-5">
+                    <h1 class="display-3 fw-bold mb-4 animate__animated animate__fadeIn">
+                        BrainBuster: <span class="text-primary">Ignite Your Intellect</span>
+                    </h1>
+                    <p class="lead text-secondary mb-5 animate__animated animate__fadeIn" data-animate-delay="0.3s">
+                        Dive into a universe of quizzes crafted to sharpen your mind and spark your curiosity.
+                    </p>
+                    <div class="d-flex gap-3 justify-content-center justify-content-lg-start">
+                        <a href="{% url 'join_quiz' %}" class="btn btn-primary btn-lg animate__animated animate__zoomIn" data-animate-delay="0.5s">
+                            <i class="fas fa-play-circle me-2"></i> Start Quizzing
+                        </a>
+                        <a href="#features" class="btn btn-outline-primary btn-lg animate__animated animate__zoomIn" data-animate-delay="0.7s">
+                            <i class="fas fa-info-circle me-2"></i> Explore Features
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center position-relative">
+                    <div class="hero-icons animate__animated animate__fadeInUp" data-animate-delay="0.5s">
+                        <i class="fas fa-brain" style="font-size: 12rem; color: var(--primary); opacity: 0.1; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"></i>
+                        <i class="fas fa-lightbulb" style="font-size: 5rem; color: var(--accent); position: absolute; top: 20%; left: 70%; transform: rotate(20deg);"></i>
+                        <i class="fas fa-question-circle" style="font-size: 4rem; color: var(--secondary); position: absolute; bottom: 10%; right: 70%; transform: rotate(-15deg);"></i>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 order-lg-1 text-center text-lg-start">
-            <h1 class="display-4 fw-bold mb-3">
-                <span class="text-primary">Brain</span>Buster
-            </h1>
-            <p class="lead text-secondary mb-4">
-                Challenge your mind, test your knowledge, and have fun with our interactive quizzes designed to engage and enlighten.
-            </p>
-            <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
-                <a href="{% url 'join_quiz' %}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-play-circle me-2"></i> Join Quiz
-                </a>
-                <a href="#features" class="btn btn-outline-secondary btn-lg">
-                    <i class="fas fa-info-circle me-2"></i> Learn More
-                </a>
-            </div>
-        </div>
-    </div>
-    
+    </section>
+
     <!-- Features Section -->
-    <div id="features" class="py-5">
-        <div class="text-center mb-5">
-            <h2 class="fw-bold">Why Choose BrainBuster?</h2>
-            <p class="text-muted">Discover the features that make our quizzes unique</p>
-        </div>
-        
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100 p-4">
-                    <div class="feature-icon bg-info-soft">
-                        <i class="fas fa-question-circle fa-2x text-info"></i>
-                    </div>
-                    <div class="card-body text-center">
-                        <h5 class="card-title fw-bold">Diverse Question Pool</h5>
-                        <p class="card-text text-muted">
-                            Thousands of questions across multiple categories to challenge your knowledge and keep you engaged.
-                        </p>
+    <section id="features" class="py-5 features-section">
+        <div class="container py-5">
+            <h2 class="text-center fw-bold mb-5 animate__animated animate__fadeInDown">What Makes BrainBuster Special?</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 animate__animated animate__slideInLeft">
+                        <div class="feature-icon bg-info-soft">
+                            <i class="fas fa-question-circle fa-2x text-info"></i>
+                        </div>
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold">Endless Challenges</h5>
+                            <p class="card-text text-muted">
+                                Explore a vast library of quizzes spanning countless topics to fuel your curiosity.
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card h-100 p-4">
-                    <div class="feature-icon bg-warning-soft">
-                        <i class="fas fa-user-friends fa-2x text-warning"></i>
-                    </div>
-                    <div class="card-body text-center">
-                        <h5 class="card-title fw-bold">Compete with Friends</h5>
-                        <p class="card-text text-muted">
-                            Create rooms, invite friends, and compete in real-time to see who has the fastest mind.
-                        </p>
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 animate__animated animate__slideInUp" data-animate-delay="0.2s">
+                        <div class="feature-icon bg-warning-soft">
+                            <i class="fas fa-user-friends fa-2x text-warning"></i>
+                        </div>
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold">Social Showdowns</h5>
+                            <p class="card-text text-muted">
+                                Battle friends in real-time and prove who’s the ultimate quiz master.
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card h-100 p-4">
-                    <div class="feature-icon bg-danger-soft">
-                        <i class="fas fa-trophy fa-2x text-danger"></i>
-                    </div>
-                    <div class="card-body text-center">
-                        <h5 class="card-title fw-bold">Track Your Progress</h5>
-                        <p class="card-text text-muted">
-                            Monitor your performance, earn badges, and climb the leaderboard as you improve.
-                        </p>
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 animate__animated animate__slideInRight" data-animate-delay="0.4s">
+                        <div class="feature-icon bg-danger-soft">
+                            <i class="fas fa-trophy fa-2x text-danger"></i>
+                        </div>
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold">Rise to Glory</h5>
+                            <p class="card-text text-muted">
+                                Track your stats, earn rewards, and dominate the global rankings.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    
+    </section>
+
     <!-- Call to Action -->
-    <div class="py-5 my-5">
-        <div class="card bg-primary text-white text-center p-5 rounded-4">
-            <div class="card-body">
-                <h2 class="card-title fw-bold mb-3">Ready to test your knowledge?</h2>
-                <p class="card-text mb-4">Join thousands of users already challenging their minds with BrainBuster</p>
-                <a href="{% url 'signup' %}" class="btn btn-light btn-lg px-5">
-                    <i class="fas fa-bolt me-2"></i> Start Now
-                </a>
-            </div>
+    <section class="py-5 cta-section">
+        <div class="container py-5 text-center">
+            <h2 class="fw-bold mb-4 animate__animated animate__pulse text-primary">Ready to Master Your Mind?</h2>
+            <p class="mb-5 animate__animated animate__fadeIn text-secondary" data-animate-delay="0.3s">
+                Join a thriving community of quiz enthusiasts and unleash your inner genius.
+            </p>
+            <a href="{% url 'signup' %}" class="btn btn-primary btn-lg animate__animated animate__bounceIn" data-animate-delay="0.5s">
+                <i class="fas fa-bolt me-2"></i> Get Started
+            </a>
         </div>
-    </div>
+    </section>
 </div>
 {% endblock %}

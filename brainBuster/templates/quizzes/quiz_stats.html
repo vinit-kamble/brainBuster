@@ -195,22 +195,22 @@
                 </div>
                 <div class="modal-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover table-bordered">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Attempt</th>
-                                    <th>Score</th>
-                                    <th>Status</th>
-                                    <th>Time Taken</th>
-                                    <th>Date</th>
+                                    <th class="border-bottom px-3 py-2">Attempt</th>
+                                    <th class="border-bottom px-3 py-2">Score</th>
+                                    <th class="border-bottom px-3 py-2">Status</th>
+                                    <th class="border-bottom px-3 py-2">Time Taken</th>
+                                    <th class="border-bottom px-3 py-2">Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for attempt in all_participations %}
                                 {% if attempt.user.id == participation.user.id %}
                                 <tr>
-                                    <td>{{ attempt.attempt_number }}</td>
-                                    <td>
+                                    <td class="border-bottom px-3 py-2">{{ attempt.attempt_number }}</td>
+                                    <td class="border-bottom px-3 py-2">
                                         <div class="progress" style="height: 8px;">
                                             <div class="progress-bar {% if attempt.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}" 
                                                 role="progressbar" style="width: {{ attempt.score|floatformat:0 }}%;">
@@ -218,13 +218,13 @@
                                         </div>
                                         <small class="text-muted">{{ attempt.score|floatformat:1 }}%</small>
                                     </td>
-                                    <td>
+                                    <td class="border-bottom px-3 py-2">
                                         <span class="badge {% if attempt.score >= quiz.minimum_score_percentage %}bg-success{% else %}bg-danger{% endif %}">
                                             {% if attempt.score >= quiz.minimum_score_percentage %}PASS{% else %}FAIL{% endif %}
                                         </span>
                                     </td>
-                                    <td>{{ attempt.total_time_taken|floatformat:1 }} sec</td>
-                                    <td>{{ attempt.submitted_at|date:"M d, Y H:i" }}</td>
+                                    <td class="border-bottom px-3 py-2">{{ attempt.total_time_taken|floatformat:1 }} sec</td>
+                                    <td class="border-bottom px-3 py-2">{{ attempt.submitted_at|date:"M d, Y H:i" }}</td>
                                 </tr>
                                 {% endif %}
                                 {% endfor %}
